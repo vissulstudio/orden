@@ -142,42 +142,36 @@
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
-
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        .animate-fade-out {
-            animation: fadeOut 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(20px); }
-        }
         
         @media print {
             body * {
                 visibility: hidden;
+                background: transparent !important;
             }
-            .print-section, .print-section * {
+            #printContainer, #printContainer * {
                 visibility: visible;
+                background: transparent !important;
+            }
+            #printContainer {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 0;
+                margin: 0;
             }
             .print-section {
-                position: relative;
-                width: 50%;
-                float: left;
-                padding: 10px;
-                box-sizing: border-box;
+                width: 100%;
+                height: 50%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border: none;
                 page-break-inside: avoid;
-            }
-            .print-section:nth-child(2) {
-                border-left: 1px dashed #ccc;
             }
             .no-print {
                 display: none !important;
@@ -186,11 +180,12 @@
                 display: none !important;
             }
             @page {
-                size: A4;
+                size: A4 landscape;
                 margin: 0;
             }
             body {
-                padding: 10mm;
+                padding: 0;
+                margin: 0;
             }
         }
     </style>
@@ -204,7 +199,7 @@
                     <img id="profileImage" src="https://via.placeholder.com/80" class="w-16 h-16 rounded-full border-2 border-white shadow-md object-cover">
                     <label for="profileUpload" class="absolute bottom-0 right-0 bg-primary text-white rounded-full p-1 cursor-pointer hover:bg-secondary transition">
                         <i class="fas fa-camera text-xs"></i>
-                        <input type="file" id="profileUpload" accept="image/*" class="hidden">
+                        <input type="file" id="profileUpload" accept="image/*" class="hidden" onchange="updateProfileImage(this)">
                     </label>
                 </div>
                 <div>
@@ -219,7 +214,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-500">Órdenes Hoy</p>
-                        <p class="font-bold" id="dailyOrdersCount">0</p>
+                        <p class="font-bold">12</p>
                     </div>
                 </div>
                 <div class="bg-white p-3 rounded-lg shadow-sm flex items-center">
@@ -228,7 +223,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-500">Completadas</p>
-                        <p class="font-bold" id="dailyCompletedCount">0</p>
+                        <p class="font-bold">8</p>
                     </div>
                 </div>
                 <div class="bg-white p-3 rounded-lg shadow-sm flex items-center">
@@ -237,7 +232,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-500">Ingresos</p>
-                        <p class="font-bold" id="dailyIncomeAmount">0 Gs.</p>
+                        <p class="font-bold">1.25M Gs.</p>
                     </div>
                 </div>
             </div>
@@ -293,7 +288,7 @@
                                         <select id="asesor" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus mr-2">
                                             <option value="">Seleccionar</option>
                                         </select>
-                                        <button type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-lg" onclick="openAsesoresModal()">
+                                        <button type="button" onclick="openAsesoresModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-lg">
                                             <i class="fas fa-cog"></i>
                                         </button>
                                     </div>
@@ -416,7 +411,7 @@
             <div class="lg:col-span-1">
                 <!-- Order Preview -->
                 <div class="card bg-white p-5 mb-6 no-print slide-in">
-                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center mb-4">
                         <i class="fas fa-eye text-primary mr-2"></i> Vista Previa
                     </h2>
                     <div id="orderPreview" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -505,21 +500,38 @@
     </div>
 
     <script>
-        // Variables globales
-        let asesores = JSON.parse(localStorage.getItem('asesores')) || ['Juan Pérez', 'María González', 'Carlos López'];
-        let editingAsesorIndex = -1;
-
         // Handle profile image upload
         function updateProfileImage(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     document.getElementById('profileImage').src = e.target.result;
+                    // Save to localStorage
                     localStorage.setItem('profileImage', e.target.result);
                 }
                 reader.readAsDataURL(input.files[0]);
             }
         }
+
+        // Tab switching functionality
+        document.getElementById('newOrderTab').addEventListener('click', function() {
+            document.getElementById('newOrderSection').classList.remove('hidden');
+            document.getElementById('savedOrdersSection').classList.add('hidden');
+            this.classList.add('border-primary', 'text-primary');
+            document.getElementById('savedOrdersTab').classList.remove('border-primary', 'text-primary');
+        });
+
+        document.getElementById('savedOrdersTab').addEventListener('click', function() {
+            document.getElementById('newOrderSection').classList.add('hidden');
+            document.getElementById('savedOrdersSection').classList.remove('hidden');
+            this.classList.add('border-primary', 'text-primary');
+            document.getElementById('newOrderTab').classList.remove('border-primary', 'text-primary');
+            loadSavedOrders();
+        });
+
+        // Variables globales para asesores
+        let asesores = JSON.parse(localStorage.getItem('asesores')) || ['Juan Pérez', 'María González', 'Carlos López'];
+        let editingAsesorIndex = -1;
 
         // Funciones para manejar asesores
         function openAsesoresModal() {
@@ -560,9 +572,11 @@
             if (!nombre) return;
             
             if (editingAsesorIndex >= 0) {
+                // Editar existente
                 asesores[editingAsesorIndex] = nombre;
                 editingAsesorIndex = -1;
             } else {
+                // Agregar nuevo
                 asesores.push(nombre);
             }
             
@@ -612,6 +626,57 @@
             }
         }
 
+        // Set default values on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar eventos
+            document.getElementById('newOrderTab').addEventListener('click', function() {
+                document.getElementById('newOrderSection').classList.remove('hidden');
+                document.getElementById('savedOrdersSection').classList.add('hidden');
+                this.classList.add('border-primary', 'text-primary');
+                document.getElementById('savedOrdersTab').classList.remove('border-primary', 'text-primary');
+            });
+
+            document.getElementById('savedOrdersTab').addEventListener('click', function() {
+                document.getElementById('newOrderSection').classList.add('hidden');
+                document.getElementById('savedOrdersSection').classList.remove('hidden');
+                this.classList.add('border-primary', 'text-primary');
+                document.getElementById('newOrderTab').classList.remove('border-primary', 'text-primary');
+                loadSavedOrders();
+            });
+            // Cargar asesores
+            cargarAsesoresEnSelect();
+            // Load profile image from localStorage if exists
+            const savedImage = localStorage.getItem('profileImage');
+            if (savedImage) {
+                document.getElementById('profileImage').src = savedImage;
+            }
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaRecepcion').value = hoy;
+            
+            // Actualizar estadísticas diarias
+            updateDailyStats();
+            
+            // Set delivery date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('fechaEntrega').value = tomorrow.toISOString().split('T')[0];
+            
+            // Set default time to 10:00 AM
+            document.getElementById('horaEntrega').value = '10:00';
+            
+            // Generate random order number
+            document.getElementById('orderNumber').textContent = Math.floor(Math.random() * 1000).toString().padStart(4, '0');
+            
+            // Initialize order preview
+            updateOrderPreview();
+            
+            // Add animation class to all slide-in elements
+            const slideElements = document.querySelectorAll('.slide-in');
+            slideElements.forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+        
         // Add new row to the table
         function agregarFila() {
             const tbody = document.getElementById('orderTableBody');
@@ -626,6 +691,7 @@
             `;
             tbody.appendChild(newRow);
             
+            // Add event listeners to new inputs
             const inputs = newRow.querySelectorAll('input');
             inputs.forEach(input => {
                 input.addEventListener('input', function() {
@@ -686,6 +752,7 @@
             const saldoInput = document.getElementById('saldo');
             saldoInput.value = saldo;
             
+            // Add animation if balance is negative
             if (saldo < 0) {
                 saldoInput.classList.add('saldo-negative');
             } else {
@@ -697,37 +764,45 @@
         
         // Print order
         function imprimirOrden() {
-            const cliente = document.getElementById('cliente').value.trim();
-            const telefono = document.getElementById('telefono').value.trim();
-            
-            if (!cliente || !telefono) {
-                showToast('Nombre del cliente y teléfono son obligatorios para imprimir', 'danger');
+            // Validar que haya al menos un producto
+            const productos = document.querySelectorAll('#orderTableBody tr');
+            if (productos.length === 0) {
+                showToast('Agregue productos antes de imprimir', 'warning');
                 return;
             }
 
-            const filas = document.querySelectorAll('#orderTableBody tr');
-            let hasValidProducts = false;
+            // Crear contenedor de impresión
+            const printContainer = document.createElement('div');
+            printContainer.id = 'printContainer';
             
-            filas.forEach(fila => {
-                const cantidad = parseInt(fila.querySelector('.cantidad').value) || 0;
-                const descripcion = fila.querySelector('.descripcion').value.trim();
-                const precio = parseInt(fila.querySelector('.precio').value) || 0;
-                
-                if (cantidad > 0 && descripcion && precio > 0) {
-                    hasValidProducts = true;
-                }
-            });
-
-            if (!hasValidProducts) {
-                showToast('Debe agregar al menos un producto válido para imprimir', 'danger');
-                return;
-            }
-
+            // Clonar la vista previa dos veces para tener dos copias
+            const preview1 = document.getElementById('orderPreview').cloneNode(true);
+            preview1.classList.add('print-section');
+            preview1.querySelector('.bg-white').classList.remove('bg-white');
+            preview1.querySelector('.bg-gray-50').classList.remove('bg-gray-50');
+            printContainer.appendChild(preview1);
+            
+            const preview2 = document.getElementById('orderPreview').cloneNode(true);
+            preview2.classList.add('print-section');
+            preview2.querySelector('.bg-white').classList.remove('bg-white');
+            preview2.querySelector('.bg-gray-50').classList.remove('bg-gray-50');
+            printContainer.appendChild(preview2);
+            
+            // Agregar temporalmente al body
+            document.body.appendChild(printContainer);
+            
+            // Imprimir
             window.print();
+            
+            // Limpiar después de imprimir
+            setTimeout(() => {
+                document.body.removeChild(printContainer);
+            }, 500);
         }
 
         // Save order
         function guardarOrden() {
+            // Validar campos obligatorios
             const cliente = document.getElementById('cliente').value.trim();
             const telefono = document.getElementById('telefono').value.trim();
             
@@ -736,6 +811,7 @@
                 return;
             }
 
+            // Obtener datos del formulario
             const fechaRecepcion = document.getElementById('fechaRecepcion').value;
             const fechaEntrega = document.getElementById('fechaEntrega').value;
             const horaEntrega = document.getElementById('horaEntrega').value;
@@ -743,12 +819,14 @@
             const entrega = parseInt(document.getElementById('entrega').value) || 0;
             const saldo = parseInt(document.getElementById('saldo').value) || 0;
             
+            // Validar productos
             const filas = document.querySelectorAll('#orderTableBody tr');
             if (filas.length === 0) {
                 showToast('Debe agregar al menos un producto', 'danger');
                 return;
             }
 
+            // Obtener productos
             const productos = [];
             filas.forEach(fila => {
                 const cantidad = parseInt(fila.querySelector('.cantidad').value) || 0;
@@ -770,6 +848,7 @@
                 return;
             }
 
+            // Crear objeto de orden
             const orden = {
                 asesor: document.getElementById('asesor').value || 'Sin asesor',
                 requiereFactura: document.getElementById('requiereFactura').value,
@@ -791,23 +870,26 @@
                 estado: saldo > 0 ? 'Pendiente' : 'Completado'
             };
 
+            // Guardar en localStorage
             try {
                 let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
                 
+                // Verificar si ya existe una orden con este número
                 const existingIndex = savedOrders.findIndex(o => o.numero === orden.numero);
                 if (existingIndex >= 0) {
-                    savedOrders[existingIndex] = orden;
+                    savedOrders[existingIndex] = orden; // Actualizar existente
                 } else {
-                    savedOrders.push(orden);
+                    savedOrders.push(orden); // Agregar nueva
                 }
                 
                 localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
                 
+                // Actualizar estadísticas
                 updateStatsAfterSave(orden);
                 
                 showToast('Orden guardada correctamente', 'success');
                 resetFormAfterSave();
-                
+                loadSavedOrders(); // Actualizar lista de pedidos guardados
             } catch (e) {
                 console.error('Error al guardar la orden:', e);
                 showToast('Error al guardar la orden', 'danger');
@@ -815,9 +897,11 @@
         }
 
         function updateStatsAfterSave(orden) {
+            // Actualizar estadísticas diarias
             const today = new Date().toISOString().split('T')[0];
             const lastUpdate = localStorage.getItem('lastStatsUpdate');
             
+            // Reiniciar estadísticas si es un nuevo día
             if (lastUpdate !== today) {
                 localStorage.setItem('lastStatsUpdate', today);
                 localStorage.setItem('dailyOrders', '0');
@@ -825,9 +909,11 @@
                 localStorage.setItem('dailyIncome', '0');
             }
             
+            // Actualizar contadores
             const dailyOrders = parseInt(localStorage.getItem('dailyOrders') || '0') + 1;
             localStorage.setItem('dailyOrders', dailyOrders.toString());
             
+            // Si la orden está completada (saldo <= 0)
             if (orden.saldo <= 0) {
                 const dailyCompleted = parseInt(localStorage.getItem('dailyCompleted') || '0') + 1;
                 localStorage.setItem('dailyCompleted', dailyCompleted.toString());
@@ -836,10 +922,12 @@
                 localStorage.setItem('dailyIncome', dailyIncome.toString());
             }
             
+            // Actualizar UI de estadísticas
             updateDailyStats();
         }
 
         function resetFormAfterSave() {
+            // Limpiar campos del cliente
             document.getElementById('cliente').value = '';
             document.getElementById('telefono').value = '';
             document.getElementById('detallesAdicionales').value = '';
@@ -849,6 +937,7 @@
             document.getElementById('facturaDireccion').value = '';
             document.getElementById('facturaFields').classList.add('hidden');
             
+            // Restablecer fechas
             const hoy = new Date().toISOString().split('T')[0];
             document.getElementById('fechaRecepcion').value = hoy;
             
@@ -857,17 +946,34 @@
             document.getElementById('fechaEntrega').value = tomorrow.toISOString().split('T')[0];
             document.getElementById('horaEntrega').value = '10:00';
             
+            // Limpiar tabla de productos
             document.getElementById('orderTableBody').innerHTML = '';
-            agregarFila();
+            agregarFila(); // Agregar una fila vacía
             
+            // Restablecer totales
             document.getElementById('costoTotal').value = '0';
             document.getElementById('entrega').value = '0';
             document.getElementById('saldo').value = '0';
             
+            // Generar nuevo número de orden
             document.getElementById('orderNumber').textContent = Math.floor(Math.random() * 1000).toString().padStart(4, '0');
             
+            // Actualizar vista previa
             updateOrderPreview();
         }
+            // Update daily stats
+            const dailyOrders = parseInt(localStorage.getItem('dailyOrders') || '0') + 1;
+            localStorage.setItem('dailyOrders', dailyOrders.toString());
+            
+            // If order is completed (full payment), update those stats too
+            if (parseInt(saldo) <= 0) {
+                const dailyCompleted = parseInt(localStorage.getItem('dailyCompleted') || '0') + 1;
+                localStorage.setItem('dailyCompleted', dailyCompleted.toString());
+                
+                const dailyIncome = parseInt(localStorage.getItem('dailyIncome') || '0') + parseInt(costoTotal);
+                localStorage.setItem('dailyIncome', dailyIncome.toString());
+            }
+            
         
         // Update order preview
         function updateOrderPreview() {
@@ -885,6 +991,7 @@
             const facturaRuc = document.getElementById('facturaRuc').value;
             const facturaDireccion = document.getElementById('facturaDireccion').value;
             
+            // Get all products
             const productos = [];
             const filas = document.querySelectorAll('#orderTableBody tr');
             
@@ -897,6 +1004,7 @@
                 });
             });
 
+            // Build products table
             let productsTable = '';
             if (productos.length > 0) {
                 productsTable = `
@@ -925,8 +1033,10 @@
                 productsTable = '<p class="text-center text-gray-500 py-4">No hay productos agregados</p>';
             }
 
+            // Build preview HTML
             preview.innerHTML = `
                 <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <!-- Header -->
                     <div class="bg-primary text-white px-4 py-3">
                         <div class="text-center">
                             <h3 class="font-bold text-lg">COPY PRINT</h3>
@@ -937,6 +1047,7 @@
                         </div>
                     </div>
 
+                    <!-- Client Info -->
                     <div class="p-4 border-b">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -966,10 +1077,12 @@
                         </div>
                     </div>
 
+                    <!-- Products -->
                     <div class="p-4">
                         ${productsTable}
                     </div>
 
+                    <!-- Totals -->
                     <div class="p-4 bg-gray-50 border-t">
                         <div class="grid grid-cols-2 gap-2">
                             <div class="text-right font-medium">Subtotal:</div>
@@ -1001,13 +1114,13 @@
             const date = new Date(dateString);
             return date.toLocaleDateString('es-ES', options);
         }
-
-        // Load saved orders
+        
+        // Load saved orders from localStorage
         function loadSavedOrders() {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             renderOrdersTable(savedOrders);
         }
-        
+
         // Filter orders based on search term
         function filterOrders() {
             const searchTerm = document.getElementById('searchOrders').value.toLowerCase();
@@ -1063,8 +1176,10 @@
             const order = savedOrders.find(o => o.numero === orderNumber);
             
             if (order) {
+                // Switch to new order tab
                 document.getElementById('newOrderTab').click();
                 
+                // Fill form with order data
                 document.getElementById('cliente').value = order.cliente;
                 document.getElementById('telefono').value = order.telefono;
                 document.getElementById('fechaRecepcion').value = order.fechaRecepcion;
@@ -1072,9 +1187,6 @@
                 document.getElementById('horaEntrega').value = order.horaEntrega;
                 document.getElementById('orderNumber').textContent = order.numero;
                 document.getElementById('requiereFactura').value = order.requiereFactura || 'no';
-                document.getElementById('asesor').value = order.asesor || '';
-                document.getElementById('detallesAdicionales').value = order.detallesAdicionales || '';
-                
                 toggleFacturaFields(document.getElementById('requiereFactura'));
                 if (order.requiereFactura === 'si') {
                     document.getElementById('facturaNombre').value = order.facturaNombre || '';
@@ -1082,8 +1194,10 @@
                     document.getElementById('facturaDireccion').value = order.facturaDireccion || '';
                 }
                 
+                // Clear existing rows
                 document.getElementById('orderTableBody').innerHTML = '';
                 
+                // Add products
                 order.productos.forEach(product => {
                     agregarFila();
                     const lastRow = document.querySelector('#orderTableBody tr:last-child');
@@ -1093,6 +1207,7 @@
                     lastRow.querySelector('.total').value = product.total;
                 });
                 
+                // Set totals
                 document.getElementById('costoTotal').value = order.costoTotal;
                 document.getElementById('entrega').value = order.entrega;
                 document.getElementById('saldo').value = order.saldo;
@@ -1118,6 +1233,7 @@
             const today = new Date().toISOString().split('T')[0];
             const lastUpdate = localStorage.getItem('lastStatsUpdate');
             
+            // Reset stats if it's a new day
             if (lastUpdate !== today) {
                 localStorage.setItem('lastStatsUpdate', today);
                 localStorage.setItem('dailyOrders', '0');
@@ -1125,13 +1241,13 @@
                 localStorage.setItem('dailyIncome', '0');
             }
             
-            const dailyOrders = localStorage.getItem('dailyOrders') || '0';
-            const dailyCompleted = localStorage.getItem('dailyCompleted') || '0';
-            const dailyIncome = localStorage.getItem('dailyIncome') || '0';
-            
-            document.getElementById('dailyOrdersCount').textContent = dailyOrders;
-            document.getElementById('dailyCompletedCount').textContent = dailyCompleted;
-            document.getElementById('dailyIncomeAmount').textContent = formatCurrency(dailyIncome);
+            // Update UI with current stats
+            document.querySelector('#statsContainer .bg-white:nth-child(1) p:last-child').textContent = 
+                localStorage.getItem('dailyOrders') || '0';
+            document.querySelector('#statsContainer .bg-white:nth-child(2) p:last-child').textContent = 
+                localStorage.getItem('dailyCompleted') || '0';
+            document.querySelector('#statsContainer .bg-white:nth-child(3) p:last-child').textContent = 
+                localStorage.getItem('dailyIncome') || '0';
         }
 
         // Show toast notification
@@ -1144,7 +1260,7 @@
                 danger: 'bg-danger'
             };
             
-            toast.className = `fixed bottom-4 right-4 text-white px-4 py-2 rounded-lg shadow-lg flex items-center z-50 ${colors[type]} animate-fade-in`;
+            toast.className = `fixed bottom-4 right-4 text-white px-4 py-2 rounded-lg shadow-lg flex items-center ${colors[type]} animate-fade-in`;
             toast.innerHTML = `
                 <i class="fas ${type === 'info' ? 'fa-info-circle' : type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'} mr-2"></i>
                 ${message}
@@ -1158,70 +1274,6 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
-
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            // Cargar asesores
-            cargarAsesoresEnSelect();
-            
-            // Load profile image from localStorage if exists
-            const savedImage = localStorage.getItem('profileImage');
-            if (savedImage) {
-                document.getElementById('profileImage').src = savedImage;
-            }
-
-            // Profile image upload handler
-            document.getElementById('profileUpload').addEventListener('change', function() {
-                updateProfileImage(this);
-            });
-            
-            const hoy = new Date().toISOString().split('T')[0];
-            document.getElementById('fechaRecepcion').value = hoy;
-            
-            updateDailyStats();
-            
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            document.getElementById('fechaEntrega').value = tomorrow.toISOString().split('T')[0];
-            
-            document.getElementById('horaEntrega').value = '10:00';
-            
-            document.getElementById('orderNumber').textContent = Math.floor(Math.random() * 1000).toString().padStart(4, '0');
-            
-            updateOrderPreview();
-            
-            const slideElements = document.querySelectorAll('.slide-in');
-            slideElements.forEach((el, index) => {
-                el.style.animationDelay = `${index * 0.1}s`;
-            });
-
-            // Tab switching functionality
-            document.getElementById('newOrderTab').addEventListener('click', function() {
-                document.getElementById('newOrderSection').classList.remove('hidden');
-                document.getElementById('savedOrdersSection').classList.add('hidden');
-                this.classList.add('border-primary', 'text-primary');
-                this.classList.remove('text-gray-500');
-                document.getElementById('savedOrdersTab').classList.remove('border-primary', 'text-primary');
-                document.getElementById('savedOrdersTab').classList.add('text-gray-500');
-            });
-
-            document.getElementById('savedOrdersTab').addEventListener('click', function() {
-                document.getElementById('newOrderSection').classList.add('hidden');
-                document.getElementById('savedOrdersSection').classList.remove('hidden');
-                this.classList.add('border-primary', 'text-primary');
-                this.classList.remove('text-gray-500');
-                document.getElementById('newOrderTab').classList.remove('border-primary', 'text-primary');
-                document.getElementById('newOrderTab').classList.add('text-gray-500');
-                loadSavedOrders();
-            });
-
-            // Add event listeners to existing inputs for preview updates
-            const inputs = document.querySelectorAll('input, select');
-            inputs.forEach(input => {
-                input.addEventListener('input', updateOrderPreview);
-                input.addEventListener('change', updateOrderPreview);
-            });
-        });
     </script>
-</body>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=VissulStudio/orden" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
 </html>
