@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Órdenes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#8b5cf6',
+                        accent: '#10b981',
+                        dark: '#1e293b',
+                        light: '#f8fafc',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+        }
+        
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .header-gradient {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        }
+        
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+        }
+        
+        .delete-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .delete-btn:hover {
+            transform: scale(1.1);
+            background-color: #ef4444 !important;
+        }
+
+        #profileImage {
+            transition: all 0.3s ease;
+        }
+
+        #profileImage:hover {
+            transform: scale(1.05);
+        }
+
+        #profileUpload + label:hover {
+            transform: scale(1.1);
+        }
+        
+        .action-btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .summary-box {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 12px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .total-row {
+            border-top: 2px dashed #cbd5e1;
+        }
+        
+        .saldo-negative {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .floating-label {
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: white;
+            padding: 0 5px;
+            font-size: 12px;
+            color: #6366f1;
+            font-weight: 500;
+        }
+        
+        .input-container {
+            position: relative;
+            padding-top: 12px;
+        }
+        
+        .product-row:hover {
+            background-color: #f8fafc;
+        }
+        
+        .status-badge {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* Estilos para la tabla expandida */
+        .table-expanded {
+            font-size: 11px;
+        }
+        
+        .table-expanded th,
+        .table-expanded td {
+            padding: 8px 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        
+        .table-expanded .col-narrow {
+            max-width: 80px;
+        }
+        
+        .table-expanded .col-wide {
+            max-width: 150px;
+        }
+
+
+        
+        @media print {
+            body * {
+                visibility: hidden;
+                background: transparent !important;
+            }
+            #printContainer, #printContainer * {
+                visibility: visible;
+                background: transparent !important;
+                color: #000000 !important;
+            }
+            #printContainer {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 0;
+                margin: 0;
+            }
+            .print-section {
+                width: 100%;
+                height: 50%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border: none;
+                page-break-inside: avoid;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .action-btn {
+                display: none !important;
+            }
+            /* Asegurar que el texto sea negro al imprimir */
+            .text-gray-600, .text-gray-500, .text-gray-400 {
+                color: #000000 !important;
+            }
+            p, span, div {
+                color: #000000 !important;
+            }
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+            body {
+                padding: 0;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-2">
+            <div class="flex items-center">
+                <div class="relative mr-4">
+                    <img id="profileImage" src="https://via.placeholder.com/80" class="w-16 h-16 rounded-full border-2 border-white shadow-md object-cover">
+                    <label for="profileUpload" class="absolute bottom-0 right-0 bg-primary text-white rounded-full p-1 cursor-pointer hover:bg-secondary transition">
+                        <i class="fas fa-camera text-xs"></i>
+                        <input type="file" id="profileUpload" accept="image/*" class="hidden" onchange="updateProfileImage(this)">
+                    </label>
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Sistema de Órdenes</h1>
+                    <p class="text-gray-600">Gestión completa de pedidos y clientes</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <button id="newOrderTab" class="px-4 py-2 font-medium text-primary border-b-2 border-primary">Nueva Orden</button>
+            <button id="savedOrdersTab" class="px-4 py-2 font-medium text-gray-500 hover:text-primary">Pedidos Guardados</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="newOrderSection">
+            <!-- Nueva Orden - Left Column -->
+            <div class="lg:col-span-2">
+                <div class="card bg-white mb-6 print-section slide-in">
+                    <!-- Header -->
+                    <div class="header-gradient py-5 px-6">
+                        <div class="flex flex-col md:flex-row justify-between items-center">
+                            <div class="flex items-center mb-3 md:mb-0">
+                                <div class="bg-white p-2 rounded-full mr-3 shadow-sm">
+                                    <i class="fas fa-file-invoice text-primary text-xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-white">Nueva Orden</h2>
+                                    <p class="text-indigo-200 text-sm">Complete los detalles del pedido</p>
+                                </div>
+                            </div>
+                            <div class="bg-white/20 rounded-lg px-3 py-1">
+                                <p class="text-white font-semibold text-sm">ORD-<span id="orderNumber">00158</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Section -->
+                    <div class="p-5">
+                        <!-- Client Info -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-user-circle text-primary mr-2"></i> Información del Cliente
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="input-container">
+                                    <label class="floating-label">Nombre del Cliente</label>
+                                    <input type="text" id="cliente" placeholder="Nombre completo" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" oninput="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Teléfono</label>
+                                    <input type="tel" id="telefono" placeholder="Número de contacto" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" oninput="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Asesor</label>
+                                    <div class="flex">
+                                        <select id="asesor" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus mr-2" onchange="updateOrderPreview()">
+                                            <option value="">Seleccionar</option>
+                                        </select>
+                                        <button type="button" onclick="openAsesoresModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-lg">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Obs.</label>
+                                    <select id="requiereFactura" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="toggleFacturaFields(this)">
+                                        <option value="no">Sin factura</option>
+                                        <option value="si">Requiere factura</option>
+                                    </select>
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Detalles adicionales</label>
+                                    <input type="text" id="detallesAdicionales" placeholder="Especificaciones del cliente" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" oninput="updateOrderPreview()">
+                                </div>
+                                <div id="facturaFields" class="hidden md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                                    <div class="input-container">
+                                        <label class="floating-label">Nombre/Razón Social</label>
+                                        <input type="text" id="facturaNombre" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus">
+                                    </div>
+                                    <div class="input-container">
+                                        <label class="floating-label">RUC</label>
+                                        <input type="text" id="facturaRuc" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus">
+                                    </div>
+                                    <div class="input-container">
+                                        <label class="floating-label">Dirección</label>
+                                        <input type="text" id="facturaDireccion" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Order Details -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-calendar-alt text-primary mr-2"></i> Fechas de Entrega
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="input-container">
+                                    <label class="floating-label">Fecha Recepción</label>
+                                    <input type="date" id="fechaRecepcion" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Fecha Entrega</label>
+                                    <input type="date" id="fechaEntrega" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Hora Entrega</label>
+                                    <input type="time" id="horaEntrega" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="updateOrderPreview()">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Order Items -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-boxes text-primary mr-2"></i> Productos
+                            </h3>
+                            <div class="overflow-x-auto">
+                                <table id="orderTable" class="w-full">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">Cant.</th>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Descripción</th>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Precio</th>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">Total</th>
+                                            <th class="py-3 px-2 bg-transparent"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orderTableBody">
+                                        <tr class="product-row border-b border-gray-200">
+                                            <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-center input-focus" min="1" value="1" oninput="calcularTotal(this)"></td>
+                                            <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" placeholder="Descripción"></td>
+                                            <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-right input-focus" min="0" step="1" placeholder="0" oninput="calcularTotal(this)"></td>
+                                            <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2 text-right font-medium" readonly></td>
+                                            <td class="py-3 px-4 text-center"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="mt-3 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition action-btn" onclick="agregarProducto()">
+                                <i class="fas fa-plus mr-2"></i> Agregar Producto
+                            </button>
+                        </div>
+                        
+                        <!-- Order Summary -->
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-calculator text-primary mr-2"></i> Resumen de Orden
+                            </h3>
+                            <div class="summary-box p-4 mb-4">
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600">Costo Total:</span>
+                                        <input type="number" id="costoTotal" class="text-right font-bold text-lg bg-transparent border-none outline-none w-32" readonly>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600">Entrega en efectivo:</span>
+                                        <input type="number" id="entregaEfectivo" class="text-right font-medium bg-gray-50 border border-gray-300 rounded py-1 px-2 w-32 input-focus" min="0" step="1" oninput="calcularSaldo()">
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600">Entrega transferencia:</span>
+                                        <input type="number" id="entregaTransferencia" class="text-right font-medium bg-gray-50 border border-gray-300 rounded py-1 px-2 w-32 input-focus" min="0" step="1" oninput="calcularSaldo()">
+                                    </div>
+                                    <div class="flex justify-between items-center total-row pt-3">
+                                        <span class="text-gray-600">Saldo:</span>
+                                        <input type="number" id="saldo" class="text-right font-bold text-lg bg-transparent border-none outline-none w-32" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <button type="button" class="w-full bg-success text-white py-3 px-4 rounded-lg hover:bg-green-600 transition action-btn" onclick="saveOrder()">
+                                    <i class="fas fa-save mr-2"></i> Guardar Orden
+                                </button>
+                                <button type="button" class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-secondary transition action-btn" onclick="printOrder()">
+                                    <i class="fas fa-print mr-2"></i> Imprimir
+                                </button>
+                                <button type="button" class="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition action-btn" onclick="resetForm()">
+                                    <i class="fas fa-refresh mr-2"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vista Previa - Right Column -->
+            <div class="lg:col-span-1">
+                <div class="card bg-white slide-in sticky top-6">
+                    <div class="header-gradient py-4 px-5">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <i class="fas fa-eye text-white mr-2"></i> Vista Previa
+                        </h3>
+                    </div>
+                    <div class="p-5">
+                        <div id="orderPreview" class="text-sm">
+                            <!-- Preview content will be generated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Orders Section -->
+        <div id="savedOrdersSection" class="hidden">
+            <div class="card bg-white p-5">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 mb-3 md:mb-0">Pedidos Guardados</h2>
+                    <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                        <input type="text" id="searchOrders" placeholder="Buscar por cliente, teléfono o asesor..." class="px-4 py-2 border border-gray-300 rounded-lg input-focus w-full md:w-64" oninput="filterOrders()">
+                        <button type="button" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition action-btn" onclick="clearAllOrders()">
+                            <i class="fas fa-trash mr-2"></i> Limpiar Todo
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full table-expanded">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Orden</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-wide">Cliente</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Teléfono</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Asesor</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">F. Entrega</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Total</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Saldo</th>
+                                <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Estado</th>
+                                <th class="py-3 px-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="savedOrdersTableBody">
+                            <!-- Orders will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="noOrdersMessage" class="text-center py-8 text-gray-500 hidden">
+                    <i class="fas fa-inbox text-4xl mb-3"></i>
+                    <p>No hay pedidos guardados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Container -->
+    <div id="printContainer" class="hidden">
+        <!-- Print content will be generated here -->
+    </div>
+
+    <!-- Modal para gestión de asesores -->
+    <div id="asesoresModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="header-gradient py-4 px-6 rounded-t-lg">
+                    <h3 class="text-lg font-bold text-white">Gestionar Asesores</h3>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nuevo Asesor</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="nuevoAsesor" placeholder="Nombre del asesor" class="flex-1 bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus">
+                            <button type="button" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition" onclick="agregarAsesor()">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Asesores Existentes</label>
+                        <div id="listaAsesores" class="space-y-2 max-h-40 overflow-y-auto">
+                            <!-- Lista de asesores se generará aquí -->
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-3">
+                        <button type="button" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition" onclick="closeAsesoresModal()">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Nuevas funciones para las acciones de pedidos guardados
+        
+        // Función para obtener el color del estado
+        function getStatusColor(estado) {
+            switch(estado) {
+                case 'PREPARANDO':
+                    return '#3b82f6'; // Azul
+                case 'PENDIENTE':
+                    return '#ef4444'; // Rojo
+                case 'LISTO':
+                    return '#84cc16'; // Verde lima
+                case 'ENTREGADO':
+                    return '#047857'; // Verde oscuro
+                default:
+                    return '#ef4444';
+            }
+            switch(estado) {
+                case 'PREPARANDO':
+                    return '#3b82f6'; // Azul
+                case 'PENDIENTE':
+                    return '#ef4444'; // Rojo
+                case 'ENTREGADO':
+                    return '#10b981'; // Verde
+                default:
+                    return '#ef4444'; // Rojo por defecto
+            }
+        }
+        
+        // Función para actualizar el estado de una orden
+        function updateOrderStatus(orderId, newStatus) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const orderIndex = savedOrders.findIndex(order => order.id === orderId);
+            
+            if (orderIndex !== -1) {
+                savedOrders[orderIndex].estado = newStatus;
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                
+                // Actualizar el color del select
+                const selectElement = document.querySelector(`select[data-order-id="${orderId}"]`);
+                if (selectElement) {
+                    selectElement.style.backgroundColor = getStatusColor(newStatus);
+                }
+            }
+        }
+
+        // Función para mostrar la pestaña de Nueva Orden
+        function showNewOrderTab() {
+            document.getElementById('newOrderSection').classList.remove('hidden');
+            document.getElementById('savedOrdersSection').classList.add('hidden');
+            document.getElementById('newOrderTab').classList.add('text-primary', 'border-b-2', 'border-primary');
+            document.getElementById('newOrderTab').classList.remove('text-gray-500');
+            document.getElementById('savedOrdersTab').classList.add('text-gray-500');
+            document.getElementById('savedOrdersTab').classList.remove('text-primary', 'border-b-2', 'border-primary');
+        }
+
+        // Ver orden completa - MODIFICADA PARA CARGAR EN EL FORMULARIO
+        function viewOrder(orderId) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const order = savedOrders.find(o => o.id === orderId);
+            
+            if (!order) return;
+            
+            // Cambiar a la pestaña de Nueva Orden
+            showNewOrderTab();
+            
+            // Cargar todos los datos de la orden en el formulario
+            document.getElementById('cliente').value = order.cliente || '';
+            document.getElementById('telefono').value = order.telefono || '';
+            document.getElementById('asesor').value = order.asesor || '';
+            document.getElementById('fechaRecepcion').value = order.fechaRecepcion || '';
+            document.getElementById('fechaEntrega').value = order.fechaEntrega || '';
+            document.getElementById('horaEntrega').value = order.horaEntrega || '';
+            document.getElementById('entregaEfectivo').value = order.entregaEfectivo || 0;
+            document.getElementById('entregaTransferencia').value = order.entregaTransferencia || 0;
+            document.getElementById('requiereFactura').value = order.requiereFactura || 'no';
+            document.getElementById('facturaNombre').value = order.facturaNombre || '';
+            document.getElementById('facturaRuc').value = order.facturaRuc || '';
+            document.getElementById('facturaDireccion').value = order.facturaDireccion || '';
+            document.getElementById('detallesAdicionales').value = order.detallesAdicionales || '';
+            
+            // Actualizar el número de orden
+            document.getElementById('orderNumber').textContent = order.orderNumber.replace('ORD-', '');
+            
+            // Mostrar campos de factura si es necesario
+            toggleFacturaFields(document.getElementById('requiereFactura'));
+            
+            // Limpiar tabla de productos existente
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+            
+            // Cargar productos
+            if (order.productos && order.productos.length > 0) {
+                order.productos.forEach(producto => {
+                    const row = document.createElement('tr');
+                    row.className = 'product-row border-b border-gray-200';
+                    row.innerHTML = `
+                        <td class="py-3 px-4">
+                            <input type="number" value="${producto.cantidad}" min="1" class="w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-center input-focus" oninput="calcularTotal(this)">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="text" value="${producto.descripcion}" placeholder="Descripción" class="w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="number" value="${producto.precio}" placeholder="0" min="0" step="1" class="w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-right input-focus" oninput="calcularTotal(this)">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="number" value="${producto.total}" readonly class="w-full bg-gray-100 border border-gray-300 rounded py-1 px-2 text-right font-medium">
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <button type="button" class="bg-red-500 text-white p-1 rounded hover:bg-red-600 delete-btn" onclick="eliminarFila(this)">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                // Agregar una fila vacía si no hay productos
+                agregarProducto();
+            }
+            
+            // Recalcular totales
+            calcularTotalGeneral();
+            calcularSaldo();
+            updateOrderPreview();
+            
+            // Mostrar mensaje de confirmación
+            alert('Orden cargada exitosamente en el formulario para visualización y edición.');
+        }
+        
+        // Editar orden - cargar en formulario para modificación
+        function editOrder(orderId) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const order = savedOrders.find(o => o.id === orderId);
+            
+            if (!order) return;
+            
+            // Marcar que estamos editando una orden existente
+            window.editingOrderId = orderId;
+            
+            // Cargar datos básicos
+            document.getElementById('cliente').value = order.cliente || '';
+            document.getElementById('telefono').value = order.telefono || '';
+            document.getElementById('asesor').value = order.asesor || '';
+            document.getElementById('fechaRecepcion').value = order.fechaRecepcion || '';
+            document.getElementById('fechaEntrega').value = order.fechaEntrega || '';
+            document.getElementById('horaEntrega').value = order.horaEntrega || '';
+            document.getElementById('costoTotal').value = order.costoTotal || 0;
+            document.getElementById('entregaEfectivo').value = order.entregaEfectivo || 0;
+            document.getElementById('entregaTransferencia').value = order.entregaTransferencia || 0;
+            document.getElementById('saldo').value = order.saldo || 0;
+            document.getElementById('requiereFactura').value = order.requiereFactura || 'no';
+            document.getElementById('facturaNombre').value = order.facturaNombre || '';
+            document.getElementById('facturaRuc').value = order.facturaRuc || '';
+            document.getElementById('facturaDireccion').value = order.facturaDireccion || '';
+            document.getElementById('detallesAdicionales').value = order.detallesAdicionales || '';
+            
+            // Mostrar campos de factura si es necesario
+            toggleFacturaFields(document.getElementById('requiereFactura'));
+            
+            // Limpiar tabla de productos
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+            
+            // Cargar productos
+            if (order.productos && order.productos.length > 0) {
+                order.productos.forEach(producto => {
+                    const row = document.createElement('tr');
+                    row.className = 'product-row border-b border-gray-200';
+                    row.innerHTML = `
+                        <td class="py-3 px-4">
+                            <input type="number" value="${producto.cantidad}" min="1" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-center input-focus" oninput="calcularTotal(this)">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="text" value="${producto.descripcion}" placeholder="Descripción" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="number" value="${producto.precio}" placeholder="0" min="0" step="1" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-right input-focus" oninput="calcularTotal(this)">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="number" value="${producto.total}" readonly class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2 text-right font-medium">
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <button type="button" class="bg-red-500 text-white p-1 rounded hover:bg-red-600 delete-btn" onclick="eliminarFila(this)">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                // Agregar una fila vacía si no hay productos
+                agregarProducto();
+            }
+            
+            // Recalcular totales
+            calcularTotalGeneral();
+            calcularSaldo();
+            updateOrderPreview();
+            
+            // Cambiar a la pestaña de Nueva Orden
+            showNewOrderTab();
+            
+            // Mostrar mensaje de confirmación
+            alert('Orden cargada para edición. Realiza los cambios necesarios y guarda para actualizar.');
+        }
+        
+        // Función para cambiar a la pestaña Nueva Orden
+        function showNewOrderTab() {
+            const newOrderTab = document.getElementById('newOrderTab');
+            const savedOrdersTab = document.getElementById('savedOrdersTab');
+            const newOrderSection = document.getElementById('newOrderSection');
+            const savedOrdersSection = document.getElementById('savedOrdersSection');
+            
+            // Switch to new order tab
+            newOrderTab.classList.add('text-primary', 'border-b-2', 'border-primary');
+            newOrderTab.classList.remove('text-gray-500');
+            savedOrdersTab.classList.remove('text-primary', 'border-b-2', 'border-primary');
+            savedOrdersTab.classList.add('text-gray-500');
+            
+            // Show/hide sections
+            newOrderSection.classList.remove('hidden');
+            savedOrdersSection.classList.add('hidden');
+        }
+        
+        // Copiar datos de orden para Google Sheets
+        function copyOrderData(orderId) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const order = savedOrders.find(o => o.id === orderId);
+            
+            if (!order) return;
+            
+            // Crear datos en formato horizontal para Google Sheets
+            const rowData = [
+                `ORD-${order.orderNumber}`,
+                order.cliente,
+                order.telefono,
+                order.asesor,
+                formatDate(order.fechaRecepcion),
+                formatDate(order.fechaEntrega),
+                order.horaEntrega || '',
+                order.detallesAdicionales || '',
+                order.requiereFactura === 'si' ? 'Sí' : 'No',
+                order.facturaNombre || '',
+                order.facturaRuc || '',
+                order.facturaDireccion || '',
+                order.costoTotal,
+                order.entregaEfectivo || 0,
+                order.entregaTransferencia || 0,
+                order.saldo
+            ].join('\t'); // Usar tabulaciones para separar columnas
+            
+            // Copiar al portapapeles
+            navigator.clipboard.writeText(rowData).then(() => {
+                alert('Datos copiados al portapapeles. Puedes pegarlos directamente en Google Sheets.');
+            }).catch(() => {
+                // Fallback para navegadores que no soportan clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = rowData;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Datos copiados al portapapeles. Puedes pegarlos directamente en Google Sheets.');
+            });
+        }
+
+        // Variables globales
+        let selectedPaymentMethod = '';
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaRecepcion').value = today;
+            
+            // Load saved advisors
+            loadAsesores();
+            
+            // Load saved orders
+            loadSavedOrders();
+            
+            // Initialize tabs
+            initializeTabs();
+            
+            // Actualizar vista previa
+            updateOrderPreview();
+        });
+
+        // Tab functionality
+        function initializeTabs() {
+            const newOrderTab = document.getElementById('newOrderTab');
+            const savedOrdersTab = document.getElementById('savedOrdersTab');
+            const newOrderSection = document.getElementById('newOrderSection');
+            const savedOrdersSection = document.getElementById('savedOrdersSection');
+
+            newOrderTab.addEventListener('click', function() {
+                // Switch to new order tab
+                newOrderTab.classList.add('text-primary', 'border-b-2', 'border-primary');
+                newOrderTab.classList.remove('text-gray-500');
+                savedOrdersTab.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                savedOrdersTab.classList.add('text-gray-500');
+                
+                // Show/hide sections
+                newOrderSection.classList.remove('hidden');
+                savedOrdersSection.classList.add('hidden');
+            });
+
+            savedOrdersTab.addEventListener('click', function() {
+                // Switch to saved orders tab
+                savedOrdersTab.classList.add('text-primary', 'border-b-2', 'border-primary');
+                savedOrdersTab.classList.remove('text-gray-500');
+                newOrderTab.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                newOrderTab.classList.add('text-gray-500');
+                
+                // Show/hide sections
+                savedOrdersSection.classList.remove('hidden');
+                newOrderSection.classList.add('hidden');
+                
+                // Reload saved orders
+                loadSavedOrders();
+            });
+        }
+
+        // Gestión de asesores
+        function openAsesoresModal() {
+            document.getElementById('asesoresModal').classList.remove('hidden');
+            loadAsesoresModal();
+        }
+
+        function closeAsesoresModal() {
+            document.getElementById('asesoresModal').classList.add('hidden');
+        }
+
+        function loadAsesores() {
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            const select = document.getElementById('asesor');
+            
+            // Limpiar opciones existentes excepto la primera
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Agregar asesores
+            asesores.forEach(asesor => {
+                const option = document.createElement('option');
+                option.value = asesor;
+                option.textContent = asesor;
+                select.appendChild(option);
+            });
+        }
+
+        function loadAsesoresModal() {
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            const lista = document.getElementById('listaAsesores');
+            
+            lista.innerHTML = '';
+            
+            asesores.forEach(asesor => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded';
+                div.innerHTML = `
+                    <span>${asesor}</span>
+                    <button type="button" class="text-red-500 hover:text-red-700" onclick="eliminarAsesor('${asesor}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                lista.appendChild(div);
+            });
+        }
+
+        function agregarAsesor() {
+            const input = document.getElementById('nuevoAsesor');
+            const nombre = input.value.trim();
+            
+            if (!nombre) return;
+            
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            
+            if (!asesores.includes(nombre)) {
+                asesores.push(nombre);
+                localStorage.setItem('asesores', JSON.stringify(asesores));
+                loadAsesores();
+                loadAsesoresModal();
+                input.value = '';
+            }
+        }
+
+        function eliminarAsesor(nombre) {
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            const index = asesores.indexOf(nombre);
+            
+            if (index > -1) {
+                asesores.splice(index, 1);
+                localStorage.setItem('asesores', JSON.stringify(asesores));
+                loadAsesores();
+                loadAsesoresModal();
+            }
+        }
+
+        // Gestión de productos
+        function agregarProducto() {
+            const tbody = document.getElementById('orderTableBody');
+            const newRow = document.createElement('tr');
+            newRow.className = 'product-row border-b border-gray-200';
+            newRow.innerHTML = `
+                <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-center input-focus" min="1" value="1" oninput="calcularTotal(this)"></td>
+                <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" placeholder="Descripción"></td>
+                <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 text-right input-focus" min="0" step="1" placeholder="0" oninput="calcularTotal(this)"></td>
+                <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2 text-right font-medium" readonly></td>
+                <td class="py-3 px-4 text-center"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+            `;
+            tbody.appendChild(newRow);
+        }
+
+        function eliminarFila(button) {
+            const row = button.closest('tr');
+            const tbody = document.getElementById('orderTableBody');
+            
+            if (tbody.children.length > 1) {
+                row.remove();
+                calcularTotalGeneral();
+            }
+        }
+
+        function calcularTotal(input) {
+            const row = input.closest('tr');
+            const cantidad = parseFloat(row.querySelector('.cantidad').value) || 0;
+            const precio = parseFloat(row.querySelector('.precio').value) || 0;
+            const total = cantidad * precio;
+            
+            row.querySelector('.total').value = total;
+            calcularTotalGeneral();
+        }
+
+        function calcularTotalGeneral() {
+            const filas = document.querySelectorAll('#orderTableBody tr');
+            let total = 0;
+            
+            filas.forEach(fila => {
+                const totalFila = parseFloat(fila.querySelector('.total').value) || 0;
+                total += totalFila;
+            });
+            
+            document.getElementById('costoTotal').value = total;
+            calcularSaldo();
+            updateOrderPreview();
+        }
+
+        function calcularSaldo() {
+            const costoTotal = parseFloat(document.getElementById('costoTotal').value) || 0;
+            const entregaEfectivo = parseFloat(document.getElementById('entregaEfectivo').value) || 0;
+            const entregaTransferencia = parseFloat(document.getElementById('entregaTransferencia').value) || 0;
+            const totalEntrega = entregaEfectivo + entregaTransferencia;
+            const saldo = costoTotal - totalEntrega;
+            
+            const saldoInput = document.getElementById('saldo');
+            saldoInput.value = saldo;
+            
+            // Aplicar clase de animación si el saldo es negativo
+            if (saldo < 0) {
+                saldoInput.parentElement.classList.add('saldo-negative');
+            } else {
+                saldoInput.parentElement.classList.remove('saldo-negative');
+            }
+            
+            updateOrderPreview();
+        }
+
+        function toggleFacturaFields(select) {
+            const facturaFields = document.getElementById('facturaFields');
+            if (select.value === 'si') {
+                facturaFields.classList.remove('hidden');
+            } else {
+                facturaFields.classList.add('hidden');
+            }
+        }
+
+        // Update order preview - MODIFICADA PARA INCLUIR DETALLES ADICIONALES Y NUEVOS CAMPOS DE ENTREGA
+        function updateOrderPreview() {
+            const preview = document.getElementById('orderPreview');
+            const cliente = document.getElementById('cliente').value || 'Cliente no especificado';
+            const telefono = document.getElementById('telefono').value || 'Sin teléfono';
+            const asesor = document.getElementById('asesor').value || 'Sin asesor';
+            const fechaRecepcion = document.getElementById('fechaRecepcion').value;
+            const fechaEntrega = document.getElementById('fechaEntrega').value;
+            const horaEntrega = document.getElementById('horaEntrega').value;
+            const costoTotal = document.getElementById('costoTotal').value || 0;
+            const entregaEfectivo = document.getElementById('entregaEfectivo').value || 0;
+            const entregaTransferencia = document.getElementById('entregaTransferencia').value || 0;
+            const saldo = document.getElementById('saldo').value || 0;
+            const requiereFactura = document.getElementById('requiereFactura').value;
+            const facturaNombre = document.getElementById('facturaNombre').value;
+            const facturaRuc = document.getElementById('facturaRuc').value;
+            const facturaDireccion = document.getElementById('facturaDireccion').value;
+            const detallesAdicionales = document.getElementById('detallesAdicionales').value;
+            
+            // Get all products
+            const productos = [];
+            const filas = document.querySelectorAll('#orderTableBody tr');
+            
+            filas.forEach(fila => {
+                productos.push({
+                    cantidad: fila.querySelector('.cantidad').value || 0,
+                    descripcion: fila.querySelector('.descripcion').value || 'Producto',
+                    precio: fila.querySelector('.precio').value || 0,
+                    total: fila.querySelector('.total').value || 0
+                });
+            });
+
+            // Build products table
+            let productsTable = '';
+            if (productos.length > 0) {
+                productsTable = `
+                    <table class="w-full text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="text-left py-2 px-3">Cant.</th>
+                                <th class="text-left py-2 px-3">Producto</th>
+                                <th class="text-right py-2 px-3">P. Unit.</th>
+                                <th class="text-right py-2 px-3">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productos.map((prod, index) => `
+                                <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                                    <td class="py-2 px-3">${prod.cantidad}</td>
+                                    <td class="py-2 px-3">${prod.descripcion}</td>
+                                    <td class="py-2 px-3 text-right">${formatCurrency(prod.precio)}</td>
+                                    <td class="py-2 px-3 text-right font-medium">${formatCurrency(prod.total)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                productsTable = '<p class="text-center text-gray-500 py-4">No hay productos agregados</p>';
+            }
+
+            // Build preview HTML
+            preview.innerHTML = `
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-primary text-white px-4 py-3">
+                        <div class="text-center">
+                            <h3 class="font-bold text-lg">COPY PRINT</h3>
+                            <p class="text-sm">ORD-${document.getElementById('orderNumber').textContent}</p>
+                            <p class="text-xs mt-1">Tel: 0994 711 183 · Monseñor Moreno y Capitán Medina</p>
+                            <div class="flex justify-center gap-3 mt-1 text-lg">
+                                <i class="fab fa-facebook-square"></i>
+                                <i class="fab fa-instagram"></i>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs mt-2">
+                            <div>
+                                <p>Fecha recepción: ${formatDate(fechaRecepcion)}</p>
+                            </div>
+                            <div class="text-right">
+                                <p>Fecha entrega: ${formatDate(fechaEntrega)} ${horaEntrega ? 'a las ' + horaEntrega : ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Info -->
+                    <div class="px-4 py-3 bg-gray-50 border-b">
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <p><strong>Cliente:</strong> ${cliente}</p>
+                                <p><strong>Teléfono:</strong> ${telefono}</p>
+                            </div>
+                            <div class="text-right">
+                                <p><strong>Asesor:</strong> ${asesor}</p>
+                                ${requiereFactura === 'si' ? `<p><strong>Factura:</strong> Sí</p>` : ''}
+                            </div>
+                        </div>
+                        ${detallesAdicionales ? `
+                            <div class="mt-2 pt-2 border-t text-xs">
+                                <p><strong>Detalles adicionales:</strong> ${detallesAdicionales}</p>
+                            </div>
+                        ` : ''}
+                        ${requiereFactura === 'si' && (facturaNombre || facturaRuc) ? `
+                            <div class="mt-2 pt-2 border-t text-xs">
+                                <p><strong>Facturación:</strong></p>
+                                ${facturaNombre ? `<p>Nombre: ${facturaNombre}</p>` : ''}
+                                ${facturaRuc ? `<p>RUC: ${facturaRuc}</p>` : ''}
+                                ${facturaDireccion ? `<p>Dirección: ${facturaDireccion}</p>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Products -->
+                    <div class="px-4 py-3">
+                        ${productsTable}
+                    </div>
+                    
+                    <!-- Totals -->
+                    <div class="px-4 py-3 bg-gray-50 border-t">
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span>Total:</span>
+                                <span class="font-bold">${formatCurrency(costoTotal)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Entrega efectivo:</span>
+                                <span>${formatCurrency(entregaEfectivo)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Entrega transferencia:</span>
+                                <span>${formatCurrency(entregaTransferencia)}</span>
+                            </div>
+                            <div class="flex justify-between border-t pt-1">
+                                <span class="font-bold">Saldo:</span>
+                                <span class="font-bold ${saldo > 0 ? 'text-red-600' : 'text-green-600'}">${formatCurrency(saldo)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load saved orders
+        function loadSavedOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            renderOrdersTable(savedOrders);
+        }
+
+        // Filter orders based on search term
+        function filterOrders() {
+            const searchTerm = document.getElementById('searchOrders').value.toLowerCase();
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const filteredOrders = savedOrders.filter(order => 
+                order.cliente.toLowerCase().includes(searchTerm) ||
+                order.telefono.toLowerCase().includes(searchTerm) ||
+                order.asesor.toLowerCase().includes(searchTerm)
+            );
+            
+            renderOrdersTable(filteredOrders);
+        }
+
+        // Render orders table with given orders array - MODIFICADA PARA MOSTRAR SOLO COLUMNAS SOLICITADAS
+        function renderOrdersTable(orders) {
+            const tableBody = document.getElementById('savedOrdersTableBody');
+            const noOrdersMessage = document.getElementById('noOrdersMessage');
+            
+            tableBody.innerHTML = '';
+            
+            if (orders.length === 0) {
+                noOrdersMessage.classList.remove('hidden');
+                return;
+            }
+            
+            noOrdersMessage.classList.add('hidden');
+            
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                
+                const estado = order.saldo > 0 ? 'Pendiente' : 'Pagado';
+                const estadoClass = order.saldo > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4 font-medium">ORD-${order.orderNumber}</td>
+                    <td class="py-3 px-4">${order.cliente}</td>
+                    <td class="py-3 px-4">${order.telefono}</td>
+                    <td class="py-3 px-4">${order.asesor}</td>
+                    <td class="py-3 px-4">${formatDate(order.fechaEntrega)}</td>
+                    <td class="py-3 px-4 font-medium">${formatCurrency(order.costoTotal)}</td>
+                    <td class="py-3 px-4 font-medium ${order.saldo > 0 ? 'text-red-600' : 'text-green-600'}">${formatCurrency(order.saldo)}</td>
+                    <td class="py-3 px-4">
+                        <select class="status-select text-xs font-semibold px-2 py-1 rounded-full border-none outline-none cursor-pointer" 
+                                data-order-id="${order.id}" 
+                                onchange="updateOrderStatus('${order.id}', this.value)"
+                                style="background-color: ${getStatusColor(order.estado || 'PENDIENTE')}; color: white;">
+                                                        <option value="PENDIENTE" ${(order.estado || 'PENDIENTE') === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE</option>
+                            <option value="PREPARANDO" ${(order.estado || 'PENDIENTE') === 'PREPARANDO' ? 'selected' : ''}>PREPARANDO</option>
+                            <option value="LISTO" ${(order.estado || 'PENDIENTE') === 'LISTO' ? 'selected' : ''}>LISTO</option>
+                            <option value="ENTREGADO" ${(order.estado || 'PENDIENTE') === 'ENTREGADO' ? 'selected' : ''}>ENTREGADO</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button type="button" class="bg-blue-500 text-white p-1 rounded hover:bg-blue-600 text-xs" onclick="viewOrder('${order.id}')" title="Ver">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" class="bg-orange-500 text-white p-1 rounded hover:bg-orange-600 text-xs" onclick="editOrder('${order.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="bg-red-500 text-white p-1 rounded hover:bg-red-600 text-xs" onclick="deleteOrder('${order.id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Save order - MODIFICADA PARA SOPORTAR EDICIÓN
+        function saveOrder() {
+            // Verificar si estamos editando una orden existente
+            const isEditing = window.editingOrderId;
+            
+            const orderData = {
+                id: isEditing || Date.now().toString(),
+                orderNumber: document.getElementById('orderNumber').textContent,
+                cliente: document.getElementById('cliente').value,
+                telefono: document.getElementById('telefono').value,
+                asesor: document.getElementById('asesor').value,
+                fechaRecepcion: document.getElementById('fechaRecepcion').value,
+                fechaEntrega: document.getElementById('fechaEntrega').value,
+                horaEntrega: document.getElementById('horaEntrega').value,
+                costoTotal: parseFloat(document.getElementById('costoTotal').value) || 0,
+                entregaEfectivo: parseFloat(document.getElementById('entregaEfectivo').value) || 0,
+                entregaTransferencia: parseFloat(document.getElementById('entregaTransferencia').value) || 0,
+                saldo: parseFloat(document.getElementById('saldo').value) || 0,
+                requiereFactura: document.getElementById('requiereFactura').value,
+                facturaNombre: document.getElementById('facturaNombre').value,
+                facturaRuc: document.getElementById('facturaRuc').value,
+                facturaDireccion: document.getElementById('facturaDireccion').value,
+                detallesAdicionales: document.getElementById('detallesAdicionales').value,
+                productos: [],
+                timestamp: new Date().toISOString()
+            };
+
+            // Get products
+            const filas = document.querySelectorAll('#orderTableBody tr');
+            filas.forEach(fila => {
+                orderData.productos.push({
+                    cantidad: fila.querySelector('.cantidad').value,
+                    descripcion: fila.querySelector('.descripcion').value,
+                    precio: fila.querySelector('.precio').value,
+                    total: fila.querySelector('.total').value
+                });
+            });
+
+            // Save to localStorage
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            
+            if (isEditing) {
+                // Actualizar orden existente
+                const orderIndex = savedOrders.findIndex(o => o.id === isEditing);
+                if (orderIndex !== -1) {
+                    // Mantener el estado original si existe
+                    orderData.estado = savedOrders[orderIndex].estado || 'PENDIENTE';
+                    savedOrders[orderIndex] = orderData;
+                    alert('Orden actualizada exitosamente');
+                }
+                // Limpiar la variable de edición
+                delete window.editingOrderId;
+            } else {
+                // Nueva orden
+                orderData.estado = 'PENDIENTE'; // Estado por defecto para nuevas órdenes
+                savedOrders.push(orderData);
+                alert('Orden guardada exitosamente');
+                
+                // Increment order number solo para nuevas órdenes
+                const currentNumber = parseInt(document.getElementById('orderNumber').textContent);
+                document.getElementById('orderNumber').textContent = String(currentNumber + 1).padStart(5, '0');
+            }
+            
+            localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+            
+            // Recargar la tabla de órdenes guardadas si estamos en esa pestaña
+            loadSavedOrders();
+        }
+
+        // Load order
+        function loadOrder(orderId) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const order = savedOrders.find(o => o.id === orderId);
+            
+            if (!order) return;
+
+            // Switch to new order tab
+            document.getElementById('newOrderTab').click();
+
+            // Load order data
+            document.getElementById('cliente').value = order.cliente;
+            document.getElementById('telefono').value = order.telefono;
+            document.getElementById('asesor').value = order.asesor;
+            document.getElementById('fechaRecepcion').value = order.fechaRecepcion;
+            document.getElementById('fechaEntrega').value = order.fechaEntrega;
+            document.getElementById('horaEntrega').value = order.horaEntrega;
+            document.getElementById('entregaEfectivo').value = order.entregaEfectivo || 0;
+            document.getElementById('entregaTransferencia').value = order.entregaTransferencia || 0;
+            document.getElementById('requiereFactura').value = order.requiereFactura;
+            document.getElementById('facturaNombre').value = order.facturaNombre || '';
+            document.getElementById('facturaRuc').value = order.facturaRuc || '';
+            document.getElementById('facturaDireccion').value = order.facturaDireccion || '';
+            document.getElementById('detallesAdicionales').value = order.detallesAdicionales || '';
+
+            // Toggle factura fields if needed
+            toggleFacturaFields(document.getElementById('requiereFactura'));
+
+            // Clear existing products
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+
+            // Load products
+            order.productos.forEach((producto, index) => {
+                if (index === 0) {
+                    // Use first row
+                    const firstRow = document.createElement('tr');
+                    firstRow.className = 'product-row border-b border-gray-200';
+                    firstRow.innerHTML = `
+                        <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="1" value="${producto.cantidad}" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" value="${producto.descripcion}"></td>
+                        <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="0" step="1" value="${producto.precio}" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2" value="${producto.total}" readonly></td>
+                        <td class="py-3 px-2"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+                    `;
+                    tbody.appendChild(firstRow);
+                } else {
+                    // Add additional rows
+                    agregarFila();
+                    const newRow = tbody.lastElementChild;
+                    newRow.querySelector('.cantidad').value = producto.cantidad;
+                    newRow.querySelector('.descripcion').value = producto.descripcion;
+                    newRow.querySelector('.precio').value = producto.precio;
+                    newRow.querySelector('.total').value = producto.total;
+                }
+            });
+
+            calcularTotal();
+            updateOrderPreview();
+        }
+
+        // Delete order
+        function deleteOrder(orderId) {
+            if (confirm('¿Está seguro de que desea eliminar esta orden?')) {
+                const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                const filteredOrders = savedOrders.filter(order => order.id !== orderId);
+                localStorage.setItem('savedOrders', JSON.stringify(filteredOrders));
+                loadSavedOrders();
+            }
+        }
+
+        // Clear all orders
+        function clearAllOrders() {
+            if (confirm('¿Está seguro de que desea eliminar todas las órdenes guardadas?')) {
+                localStorage.removeItem('savedOrders');
+                loadSavedOrders();
+            }
+        }
+
+        // Print order
+        function printOrder() {
+            const printContainer = document.getElementById('printContainer');
+            const orderPreview = document.getElementById('orderPreview').innerHTML;
+            
+            printContainer.innerHTML = `
+                <div class="print-section">
+                    ${orderPreview}
+                </div>
+                <div class="print-section">
+                    ${orderPreview}
+                </div>
+            `;
+            
+            printContainer.classList.remove('hidden');
+            window.print();
+            printContainer.classList.add('hidden');
+        }
+
+        // Print saved order
+        function printSavedOrder(orderId) {
+            loadOrder(orderId);
+            setTimeout(() => {
+                printOrder();
+            }, 100);
+        }
+
+        // Reset form
+        function resetForm() {
+            if (confirm('¿Está seguro de que desea limpiar el formulario?')) {
+                document.getElementById('cliente').value = '';
+                document.getElementById('telefono').value = '';
+                document.getElementById('asesor').value = '';
+                document.getElementById('fechaEntrega').value = '';
+                document.getElementById('horaEntrega').value = '';
+                document.getElementById('entregaEfectivo').value = '';
+                document.getElementById('entregaTransferencia').value = '';
+                document.getElementById('detallesAdicionales').value = '';
+                document.getElementById('requiereFactura').value = 'no';
+                document.getElementById('facturaNombre').value = '';
+                document.getElementById('facturaRuc').value = '';
+                document.getElementById('facturaDireccion').value = '';
+                
+                toggleFacturaFields(document.getElementById('requiereFactura'));
+                
+                // Reset products table
+                const tbody = document.getElementById('orderTableBody');
+                tbody.innerHTML = `
+                    <tr class="product-row border-b border-gray-200">
+                        <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="1" value="1" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" placeholder="Descripción"></td>
+                        <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="0" step="1" placeholder="0" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2" readonly></td>
+                        <td class="py-3 px-2"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+                    </tr>
+                `;
+                
+                calcularTotal();
+                updateOrderPreview();
+            }
+        }
+
+        // Update profile image
+        function updateProfileImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profileImage').src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'No especificada';
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString('es-EC', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+    </script>
+</body>
+</html>
+
