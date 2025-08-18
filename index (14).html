@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Órdenes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#8b5cf6',
+                        accent: '#10b981',
+                        dark: '#1e293b',
+                        light: '#f8fafc',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+        }
+        
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .header-gradient {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        }
+        
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+        }
+        
+        .delete-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .delete-btn:hover {
+            transform: scale(1.1);
+            background-color: #ef4444 !important;
+        }
+
+        #profileImage {
+            transition: all 0.3s ease;
+        }
+
+        #profileImage:hover {
+            transform: scale(1.05);
+        }
+
+        #profileUpload + label:hover {
+            transform: scale(1.1);
+        }
+        
+        .action-btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .summary-box {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 12px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .total-row {
+            border-top: 2px dashed #cbd5e1;
+        }
+        
+        .saldo-negative {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .floating-label {
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: white;
+            padding: 0 5px;
+            font-size: 12px;
+            color: #6366f1;
+            font-weight: 500;
+        }
+        
+        .input-container {
+            position: relative;
+            padding-top: 12px;
+        }
+        
+        .product-row:hover {
+            background-color: #f8fafc;
+        }
+        
+        .status-badge {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* Estilos para la tabla expandida */
+        .table-expanded {
+            font-size: 11px;
+        }
+        
+        .table-expanded th,
+        .table-expanded td {
+            padding: 8px 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        
+        .table-expanded .col-narrow {
+            max-width: 80px;
+        }
+        
+        .table-expanded .col-wide {
+            max-width: 150px;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+                background: transparent !important;
+            }
+            #printContainer, #printContainer * {
+                visibility: visible;
+                background: transparent !important;
+                color: #000000 !important;
+            }
+            #printContainer {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 0;
+                margin: 0;
+            }
+            .print-section {
+                width: 100%;
+                height: 50%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border: none;
+                page-break-inside: avoid;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .action-btn {
+                display: none !important;
+            }
+            /* Asegurar que el texto sea negro al imprimir */
+            .text-gray-600, .text-gray-500, .text-gray-400 {
+                color: #000000 !important;
+            }
+            p, span, div {
+                color: #000000 !important;
+            }
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+            body {
+                padding: 0;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-2">
+            <div class="flex items-center">
+                <div class="relative mr-4">
+                    <img id="profileImage" src="https://via.placeholder.com/80" class="w-16 h-16 rounded-full border-2 border-white shadow-md object-cover">
+                    <label for="profileUpload" class="absolute bottom-0 right-0 bg-primary text-white rounded-full p-1 cursor-pointer hover:bg-secondary transition">
+                        <i class="fas fa-camera text-xs"></i>
+                        <input type="file" id="profileUpload" accept="image/*" class="hidden" onchange="updateProfileImage(this)">
+                    </label>
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Sistema de Órdenes</h1>
+                    <p class="text-gray-600">Gestión completa de pedidos y clientes</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <button id="newOrderTab" class="px-4 py-2 font-medium text-primary border-b-2 border-primary">Nueva Orden</button>
+            <button id="savedOrdersTab" class="px-4 py-2 font-medium text-gray-500 hover:text-primary">Pedidos Guardados</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="newOrderSection">
+            <!-- Nueva Orden - Left Column -->
+            <div class="lg:col-span-2">
+                <div class="card bg-white mb-6 print-section slide-in">
+                    <!-- Header -->
+                    <div class="header-gradient py-5 px-6">
+                        <div class="flex flex-col md:flex-row justify-between items-center">
+                            <div class="flex items-center mb-3 md:mb-0">
+                                <div class="bg-white p-2 rounded-full mr-3 shadow-sm">
+                                    <i class="fas fa-file-invoice text-primary text-xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-white">Nueva Orden</h2>
+                                    <p class="text-indigo-200 text-sm">Complete los detalles del pedido</p>
+                                </div>
+                            </div>
+                            <div class="bg-white/20 rounded-lg px-3 py-1">
+                                <p class="text-white font-semibold text-sm">ORD-<span id="orderNumber">00158</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Section -->
+                    <div class="p-5">
+                        <!-- Client Info -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-user-circle text-primary mr-2"></i> Información del Cliente
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="input-container">
+                                    <label class="floating-label">Nombre del Cliente</label>
+                                    <input type="text" id="cliente" placeholder="Nombre completo" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" oninput="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Teléfono</label>
+                                    <input type="tel" id="telefono" placeholder="Número de contacto" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" oninput="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Asesor</label>
+                                    <div class="flex">
+                                        <select id="asesor" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus mr-2" onchange="updateOrderPreview()">
+                                            <option value="">Seleccionar</option>
+                                        </select>
+                                        <button type="button" onclick="openAsesoresModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-lg">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Obs.</label>
+                                    <select id="requiereFactura" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="toggleFacturaFields(this)">
+                                        <option value="no">Sin factura</option>
+                                        <option value="si">Requiere factura</option>
+                                    </select>
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Detalles adicionales</label>
+                                    <input type="text" id="detallesAdicionales" placeholder="Especificaciones del cliente" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" oninput="updateOrderPreview()">
+                                </div>
+                                <div id="facturaFields" class="hidden md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                                    <div class="input-container">
+                                        <label class="floating-label">Nombre/Razón Social</label>
+                                        <input type="text" id="facturaNombre" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus">
+                                    </div>
+                                    <div class="input-container">
+                                        <label class="floating-label">RUC</label>
+                                        <input type="text" id="facturaRuc" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus">
+                                    </div>
+                                    <div class="input-container">
+                                        <label class="floating-label">Dirección</label>
+                                        <input type="text" id="facturaDireccion" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Order Details -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-calendar-alt text-primary mr-2"></i> Fechas de Entrega
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="input-container">
+                                    <label class="floating-label">Fecha Recepción</label>
+                                    <input type="date" id="fechaRecepcion" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Fecha Entrega</label>
+                                    <input type="date" id="fechaEntrega" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="updateOrderPreview()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Hora Entrega</label>
+                                    <input type="time" id="horaEntrega" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" onchange="updateOrderPreview()">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Order Items -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-boxes text-primary mr-2"></i> Productos
+                            </h3>
+                            <div class="overflow-x-auto">
+                                <table id="orderTable" class="w-full">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">Cant.</th>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Descripción</th>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Precio</th>
+                                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
+                                            <th class="py-3 px-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orderTableBody">
+                                        <tr class="product-row border-b border-gray-200">
+                                            <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="1" value="1" oninput="calcularFila(this)"></td>
+                                            <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" placeholder="Descripción"></td>
+                                            <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="0" step="1" placeholder="0" oninput="calcularFila(this)"></td>
+                                            <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2" readonly></td>
+                                            <td class="py-3 px-2"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="mt-3 bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary" onclick="agregarFila()">
+                                <i class="fas fa-plus mr-2"></i>Agregar Producto
+                            </button>
+                        </div>
+                        
+                        <!-- Payment Section -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <i class="fas fa-money-bill-wave text-primary mr-2"></i> Información de Pago
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="input-container">
+                                    <label class="floating-label">Costo Total</label>
+                                    <input type="number" id="costoTotal" class="w-full bg-gray-100 border border-gray-300 rounded-lg py-2 px-3" readonly>
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Entrega Efectivo</label>
+                                    <input type="number" id="entregaEfectivo" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" min="0" step="1" placeholder="0" oninput="calcularSaldo()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Entrega Transferencia</label>
+                                    <input type="number" id="entregaTransferencia" class="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-3 input-focus" min="0" step="1" placeholder="0" oninput="calcularSaldo()">
+                                </div>
+                                <div class="input-container">
+                                    <label class="floating-label">Saldo</label>
+                                    <input type="number" id="saldo" class="w-full bg-gray-100 border border-gray-300 rounded-lg py-2 px-3" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex flex-wrap gap-3 justify-center">
+                            <button type="button" class="action-btn bg-success text-white px-6 py-3 rounded-lg hover:bg-green-600 font-medium" onclick="saveOrder()">
+                                <i class="fas fa-save mr-2"></i>Guardar Orden
+                            </button>
+                            <button type="button" class="action-btn bg-primary text-white px-6 py-3 rounded-lg hover:bg-secondary font-medium" onclick="printOrder()">
+                                <i class="fas fa-print mr-2"></i>Imprimir
+                            </button>
+                            <button type="button" class="action-btn bg-warning text-white px-6 py-3 rounded-lg hover:bg-yellow-600 font-medium" onclick="resetForm()">
+                                <i class="fas fa-refresh mr-2"></i>Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Order Preview -->
+            <div class="lg:col-span-1">
+                <div class="card bg-white sticky top-6">
+                    <div class="bg-gray-50 py-4 px-6 border-b">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <i class="fas fa-eye text-primary mr-2"></i> Vista Previa
+                        </h3>
+                    </div>
+                    <div class="p-4">
+                        <div id="orderPreview" class="text-sm">
+                            <!-- Preview content will be generated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        
+    <!-- ===== Temporizador de Diseño (con 5 min gratis) ===== -->
+    <div class="lg:col-span-2 mt-6">
+      <div class="card bg-white">
+        <div class="bg-gray-50 py-4 px-6 border-b">
+          <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+            <i class="fa-solid fa-stopwatch text-indigo-500 mr-2"></i> Temporizador de Diseño
+          </h3>
+        </div>
+        <div class="p-6">
+          <div class="flex flex-wrap gap-6 justify-center mb-4">
+            <div class="text-center">
+              <label class="block text-gray-700 text-sm mb-1" for="rateGs">Monto por minuto (Gs)</label>
+              <input id="rateGs" type="number" value="500" min="0" step="1"
+                     class="w-40 text-center border rounded-lg py-2 px-3 input-focus" />
+            </div>
+            <div class="text-center">
+              <label class="block text-gray-700 text-sm mb-1" for="freeMin">Minutos gratis</label>
+              <input id="freeMin" type="number" value="5" min="0" step="1"
+                     class="w-40 text-center border rounded-lg py-2 px-3 input-focus" />
+            </div>
+          </div>
+
+          <div class="flex justify-center gap-3 mb-4">
+            <button id="btnStart" class="start action-btn bg-green-500 text-white px-5 py-2 rounded-lg hover:bg-green-600">
+              Iniciar
+            </button>
+            <button id="btnStop" class="stop action-btn bg-yellow-500 text-white px-5 py-2 rounded-lg hover:bg-yellow-600">
+              Detener
+            </button>
+            <button id="btnReset" class="reset action-btn bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600">
+              Reset
+            </button>
+          </div>
+
+          <div class="text-center">
+            <div id="timerDisplay" class="text-3xl font-bold tracking-wider mb-1">00:00:00</div>
+            <div id="timerTotal" class="text-gray-700 mb-4">Total: 0 Gs</div>
+          </div>
+
+          <div class="mb-2 font-semibold">Historial</div>
+          <div id="timerHistory" class="space-y-1 text-sm min-h-[40px]"></div>
+
+          <div class="mt-4 flex justify-center">
+            <button id="btnDownloadHistory"
+                    class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+              Descargar Historial
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ===== /Temporizador de Diseño ===== -->
+
+</div>
+
+        <!-- Saved Orders Section -->
+        <div id="savedOrdersSection" class="hidden">
+            <div class="card bg-white">
+                <div class="header-gradient py-5 px-6">
+                    <div class="flex flex-col md:flex-row justify-between items-center">
+                        <div class="flex items-center mb-3 md:mb-0">
+                            <div class="bg-white p-2 rounded-full mr-3 shadow-sm">
+                                <i class="fas fa-list-alt text-primary text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-white">Pedidos Guardados</h2>
+                                <p class="text-indigo-200 text-sm">Gestiona todas las órdenes guardadas</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="text" id="searchOrders" placeholder="Buscar por cliente, teléfono o asesor..." class="px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-indigo-200 w-64" oninput="filterOrders()">
+                            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600" onclick="exportAllData()">
+                                <i class="fas fa-download mr-2"></i>Exportar Datos
+                            </button>
+                            <button type="button" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600" onclick="document.getElementById('importFile').click()">
+                                <i class="fas fa-upload mr-2"></i>Importar Datos
+                            </button>
+                            <button type="button" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600" onclick="clearAllOrders()">
+                                <i class="fas fa-trash mr-2"></i>Limpiar Todo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-expanded">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-narrow">Orden</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider col-wide">Cliente</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Teléfono</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Asesor</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">F. Entrega</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Saldo</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Estado</th>
+                                    <th class="py-3 px-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Acciones</th>
+                                    <th class="py-3 px-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Descargar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="savedOrdersTableBody">
+                                <!-- Saved orders will be populated here -->
+                            </tbody>
+                        </table>
+                        
+                        <div id="noOrdersMessage" class="text-center py-8 text-gray-500 hidden">
+                            <i class="fas fa-inbox text-4xl mb-4"></i>
+                            <p class="text-lg">No hay órdenes guardadas</p>
+                            <p class="text-sm">Las órdenes que guardes aparecerán aquí</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Container (Hidden) -->
+    <div id="printContainer" class="hidden"></div>
+
+    <!-- Input file oculto para importar datos -->
+    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(this)">
+
+    <!-- Modal para gestionar asesores -->
+    <div id="asesoresModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Gestionar Asesores</h3>
+                        <button onclick="closeAsesoresModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="flex gap-2">
+                            <input type="text" id="nuevoAsesor" placeholder="Nombre del asesor" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                            <button onclick="agregarAsesor()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="max-h-60 overflow-y-auto">
+                        <ul id="listaAsesores" class="space-y-2">
+                            <!-- Lista de asesores se poblará aquí -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let currentOrderNumber = 158; // Número inicial por defecto
+        let editingOrderId = null;
+        
+        // Sistema de versioning para persistencia de datos
+        const SYSTEM_VERSION = '2.1';
+        const DATA_VERSION_KEY = 'systemVersion';
+        
+        // Inicialización del sistema
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSystem();
+            loadAsesores();
+            loadSavedOrders();
+            updateOrderPreview();
+            
+            // Set today's date as default reception date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaRecepcion').value = today;
+            
+            // Tab functionality
+            document.getElementById('newOrderTab').addEventListener('click', function() {
+                showNewOrderSection();
+            });
+            
+            document.getElementById('savedOrdersTab').addEventListener('click', function() {
+                showSavedOrdersSection();
+            });
+            
+            updateOrderPreview();
+        });
+        
+        // Inicializar el sistema con verificación de versión y migración de datos
+        function initializeSystem() {
+            const storedVersion = localStorage.getItem(DATA_VERSION_KEY);
+            
+            if (!storedVersion || storedVersion !== SYSTEM_VERSION) {
+                console.log('Detectada nueva versión del sistema. Migrando datos...');
+                migrateData(storedVersion);
+                localStorage.setItem(DATA_VERSION_KEY, SYSTEM_VERSION);
+            }
+            
+            // Inicializar número de orden basado en órdenes guardadas
+            initializeOrderNumber();
+        }
+        
+        // Migrar datos entre versiones
+        function migrateData(oldVersion) {
+            try {
+                // Crear backup de datos existentes
+                const existingOrders = localStorage.getItem('savedOrders');
+                if (existingOrders) {
+                    const backupKey = `backup_orders_${oldVersion || 'unknown'}_${Date.now()}`;
+                    localStorage.setItem(backupKey, existingOrders);
+                    console.log(`Backup creado en: ${backupKey}`);
+                }
+                
+                // Aquí se pueden agregar migraciones específicas según la versión
+                if (!oldVersion) {
+                    // Primera instalación, no hay datos que migrar
+                    console.log('Primera instalación detectada');
+                } else {
+                    console.log(`Migrando desde versión ${oldVersion} a ${SYSTEM_VERSION}`);
+                }
+                
+            } catch (error) {
+                console.error('Error durante la migración de datos:', error);
+            }
+        }
+        
+        // Inicializar número de orden basado en órdenes guardadas
+        function initializeOrderNumber() {
+            try {
+                const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                
+                if (savedOrders.length > 0) {
+                    // Encontrar el número más alto usado
+                    const maxOrderNumber = Math.max(...savedOrders.map(order => {
+                        const orderNum = parseInt(order.orderNumber);
+                        return isNaN(orderNum) ? 0 : orderNum;
+                    }));
+                    
+                    // Establecer el siguiente número disponible
+                    currentOrderNumber = maxOrderNumber + 1;
+                } else {
+                    // Si no hay órdenes guardadas, usar el número por defecto
+                    currentOrderNumber = 158;
+                }
+                
+                // Actualizar el display del número de orden
+                updateOrderNumberDisplay();
+                
+            } catch (error) {
+                console.error('Error al inicializar número de orden:', error);
+                currentOrderNumber = 158; // Fallback al número por defecto
+                updateOrderNumberDisplay();
+            }
+        }
+        
+        // Actualizar el display del número de orden
+        function updateOrderNumberDisplay() {
+            const orderNumberElement = document.getElementById('orderNumber');
+            if (orderNumberElement) {
+                orderNumberElement.textContent = String(currentOrderNumber).padStart(5, '0');
+            }
+        }
+        
+        // Obtener el siguiente número de orden disponible
+        function getNextOrderNumber() {
+            const nextNumber = currentOrderNumber;
+            currentOrderNumber++;
+            updateOrderNumberDisplay();
+            return nextNumber;
+        }
+
+        // FUNCIONES DE EXPORTACIÓN E IMPORTACIÓN DE DATOS
+        
+        // Exportar todos los datos del sistema
+        function exportAllData() {
+            try {
+                // Recopilar todos los datos del sistema
+                const exportData = {
+                    version: SYSTEM_VERSION,
+                    exportDate: new Date().toISOString(),
+                    currentOrderNumber: currentOrderNumber,
+                    savedOrders: JSON.parse(localStorage.getItem('savedOrders')) || [],
+                    asesores: JSON.parse(localStorage.getItem('asesores')) || [],
+                    systemVersion: localStorage.getItem(DATA_VERSION_KEY)
+                };
+                
+                // Crear el archivo JSON
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                // Crear el enlace de descarga
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `ordenes_backup_${new Date().toISOString().split('T')[0]}.json`;
+                
+                // Descargar el archivo
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert(`Datos exportados exitosamente. Se descargó el archivo: ordenes_backup_${new Date().toISOString().split('T')[0]}.json`);
+                
+            } catch (error) {
+                console.error('Error al exportar datos:', error);
+                alert('Error al exportar los datos. Por favor, inténtelo de nuevo.');
+            }
+        }
+        
+        // Importar datos desde archivo JSON
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if (file.type !== 'application/json') {
+                alert('Por favor, seleccione un archivo JSON válido.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validar estructura del archivo
+                    if (!importedData.savedOrders || !Array.isArray(importedData.savedOrders)) {
+                        alert('El archivo no tiene el formato correcto. Debe contener un array de órdenes guardadas.');
+                        return;
+                    }
+                    
+                    // Confirmar la importación
+                    const confirmMessage = `¿Está seguro de que desea importar los datos?\\n\\n` +
+                        `Archivo: ${file.name}\\n` +
+                        `Fecha de exportación: ${importedData.exportDate ? new Date(importedData.exportDate).toLocaleString() : 'No especificada'}\\n` +
+                        `Órdenes a importar: ${importedData.savedOrders.length}\\n` +
+                        `Asesores a importar: ${importedData.asesores ? importedData.asesores.length : 0}\\n\\n` +
+                        `ADVERTENCIA: Esto reemplazará todos los datos actuales.`;
+                    
+                    if (!confirm(confirmMessage)) {
+                        return;
+                    }
+                    
+                    // Crear backup de datos actuales antes de importar
+                    const currentData = {
+                        version: SYSTEM_VERSION,
+                        backupDate: new Date().toISOString(),
+                        currentOrderNumber: currentOrderNumber,
+                        savedOrders: JSON.parse(localStorage.getItem('savedOrders')) || [],
+                        asesores: JSON.parse(localStorage.getItem('asesores')) || []
+                    };
+                    
+                    const backupKey = `backup_before_import_${Date.now()}`;
+                    localStorage.setItem(backupKey, JSON.stringify(currentData));
+                    console.log(`Backup automático creado en: ${backupKey}`);
+                    
+                    // Importar los datos
+                    localStorage.setItem('savedOrders', JSON.stringify(importedData.savedOrders));
+                    
+                    if (importedData.asesores && Array.isArray(importedData.asesores)) {
+                        localStorage.setItem('asesores', JSON.stringify(importedData.asesores));
+                    }
+                    
+                    // Actualizar número de orden basado en los datos importados
+                    if (importedData.currentOrderNumber && importedData.currentOrderNumber > currentOrderNumber) {
+                        currentOrderNumber = importedData.currentOrderNumber;
+                    } else {
+                        // Recalcular basado en las órdenes importadas
+                        initializeOrderNumber();
+                    }
+                    
+                    // Actualizar la interfaz
+                    loadAsesores();
+                    loadSavedOrders();
+                    updateOrderNumberDisplay();
+                    
+                    alert(`Datos importados exitosamente.\\n\\n` +
+                          `Órdenes importadas: ${importedData.savedOrders.length}\\n` +
+                          `Asesores importados: ${importedData.asesores ? importedData.asesores.length : 0}\\n` +
+                          `Próximo número de orden: ORD-${String(currentOrderNumber).padStart(5, '0')}`);
+                    
+                } catch (error) {
+                    console.error('Error al importar datos:', error);
+                    alert('Error al procesar el archivo. Verifique que sea un archivo de backup válido del sistema.');
+                }
+            };
+            
+            reader.readAsText(file);
+            
+            // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+            input.value = '';
+        }
+
+        // Tab functionality
+        function showNewOrderSection() {
+            document.getElementById('newOrderSection').classList.remove('hidden');
+            document.getElementById('savedOrdersSection').classList.add('hidden');
+            document.getElementById('newOrderTab').classList.add('text-primary', 'border-b-2', 'border-primary');
+            document.getElementById('newOrderTab').classList.remove('text-gray-500');
+            document.getElementById('savedOrdersTab').classList.remove('text-primary', 'border-b-2', 'border-primary');
+            document.getElementById('savedOrdersTab').classList.add('text-gray-500');
+        }
+
+        function showSavedOrdersSection() {
+            document.getElementById('newOrderSection').classList.add('hidden');
+            document.getElementById('savedOrdersSection').classList.remove('hidden');
+            document.getElementById('savedOrdersTab').classList.add('text-primary', 'border-b-2', 'border-primary');
+            document.getElementById('savedOrdersTab').classList.remove('text-gray-500');
+            document.getElementById('newOrderTab').classList.remove('text-primary', 'border-b-2', 'border-primary');
+            document.getElementById('newOrderTab').classList.add('text-gray-500');
+            loadSavedOrders();
+        }
+
+        // Gestión de asesores
+        function openAsesoresModal() {
+            document.getElementById('asesoresModal').classList.remove('hidden');
+            loadAsesoresModal();
+        }
+
+        function closeAsesoresModal() {
+            document.getElementById('asesoresModal').classList.add('hidden');
+        }
+
+        function loadAsesores() {
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            const select = document.getElementById('asesor');
+            
+            // Limpiar opciones existentes (excepto la primera)
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Agregar asesores
+            asesores.forEach(asesor => {
+                const option = document.createElement('option');
+                option.value = asesor;
+                option.textContent = asesor;
+                select.appendChild(option);
+            });
+        }
+
+        function loadAsesoresModal() {
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            const lista = document.getElementById('listaAsesores');
+            
+            lista.innerHTML = '';
+            
+            asesores.forEach((asesor, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 bg-gray-50 rounded';
+                li.innerHTML = `
+                    <span>${asesor}</span>
+                    <button onclick="eliminarAsesor(${index})" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                lista.appendChild(li);
+            });
+        }
+
+        function agregarAsesor() {
+            const nuevoAsesor = document.getElementById('nuevoAsesor').value.trim();
+            if (!nuevoAsesor) return;
+            
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            
+            if (!asesores.includes(nuevoAsesor)) {
+                asesores.push(nuevoAsesor);
+                localStorage.setItem('asesores', JSON.stringify(asesores));
+                loadAsesores();
+                loadAsesoresModal();
+                document.getElementById('nuevoAsesor').value = '';
+            }
+        }
+
+        function eliminarAsesor(index) {
+            const asesores = JSON.parse(localStorage.getItem('asesores')) || [];
+            asesores.splice(index, 1);
+            localStorage.setItem('asesores', JSON.stringify(asesores));
+            loadAsesores();
+            loadAsesoresModal();
+        }
+
+        // Product management
+        function agregarFila() {
+            const tbody = document.getElementById('orderTableBody');
+            const newRow = document.createElement('tr');
+            newRow.className = 'product-row border-b border-gray-200';
+            newRow.innerHTML = `
+                <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="1" value="1" oninput="calcularFila(this)"></td>
+                <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" placeholder="Descripción"></td>
+                <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="0" step="1" placeholder="0" oninput="calcularFila(this)"></td>
+                <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2" readonly></td>
+                <td class="py-3 px-2"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+            `;
+            tbody.appendChild(newRow);
+        }
+
+        function eliminarFila(button) {
+            const tbody = document.getElementById('orderTableBody');
+            if (tbody.children.length > 1) {
+                button.closest('tr').remove();
+                calcularTotal();
+            }
+        }
+
+        function calcularFila(input) {
+            const fila = input.closest('tr');
+            const cantidad = parseFloat(fila.querySelector('.cantidad').value) || 0;
+            const precio = parseFloat(fila.querySelector('.precio').value) || 0;
+            const total = cantidad * precio;
+            
+            fila.querySelector('.total').value = total;
+            calcularTotal();
+        }
+
+        function calcularTotal() {
+            let total = 0;
+            const filas = document.querySelectorAll('#orderTableBody tr');
+            
+            filas.forEach(fila => {
+                const totalFila = parseFloat(fila.querySelector('.total').value) || 0;
+                total += totalFila;
+            });
+            
+            document.getElementById('costoTotal').value = total;
+            calcularSaldo();
+            updateOrderPreview();
+        }
+
+        function calcularSaldo() {
+            const costoTotal = parseFloat(document.getElementById('costoTotal').value) || 0;
+            const entregaEfectivo = parseFloat(document.getElementById('entregaEfectivo').value) || 0;
+            const entregaTransferencia = parseFloat(document.getElementById('entregaTransferencia').value) || 0;
+            const totalEntrega = entregaEfectivo + entregaTransferencia;
+            const saldo = costoTotal - totalEntrega;
+            
+            const saldoInput = document.getElementById('saldo');
+            saldoInput.value = saldo;
+            
+            // Aplicar clase de animación si el saldo es negativo
+            if (saldo < 0) {
+                saldoInput.parentElement.classList.add('saldo-negative');
+            } else {
+                saldoInput.parentElement.classList.remove('saldo-negative');
+            }
+            
+            updateOrderPreview();
+        }
+
+        function toggleFacturaFields(select) {
+            const facturaFields = document.getElementById('facturaFields');
+            if (select.value === 'si') {
+                facturaFields.classList.remove('hidden');
+            } else {
+                facturaFields.classList.add('hidden');
+            }
+        }
+
+        // Update order preview
+        function updateOrderPreview() {
+            const preview = document.getElementById('orderPreview');
+            const cliente = document.getElementById('cliente').value || 'Cliente no especificado';
+            const telefono = document.getElementById('telefono').value || 'Sin teléfono';
+            const asesor = document.getElementById('asesor').value || 'Sin asesor';
+            const fechaRecepcion = document.getElementById('fechaRecepcion').value;
+            const fechaEntrega = document.getElementById('fechaEntrega').value;
+            const horaEntrega = document.getElementById('horaEntrega').value;
+            const costoTotal = document.getElementById('costoTotal').value || 0;
+            const entregaEfectivo = document.getElementById('entregaEfectivo').value || 0;
+            const entregaTransferencia = document.getElementById('entregaTransferencia').value || 0;
+            const saldo = document.getElementById('saldo').value || 0;
+            const requiereFactura = document.getElementById('requiereFactura').value;
+            const facturaNombre = document.getElementById('facturaNombre').value;
+            const facturaRuc = document.getElementById('facturaRuc').value;
+            const facturaDireccion = document.getElementById('facturaDireccion').value;
+            const detallesAdicionales = document.getElementById('detallesAdicionales').value;
+            
+            // Get all products
+            const productos = [];
+            const filas = document.querySelectorAll('#orderTableBody tr');
+            
+            filas.forEach(fila => {
+                productos.push({
+                    cantidad: fila.querySelector('.cantidad').value || 0,
+                    descripcion: fila.querySelector('.descripcion').value || 'Producto',
+                    precio: fila.querySelector('.precio').value || 0,
+                    total: fila.querySelector('.total').value || 0
+                });
+            });
+
+            // Build products table
+            let productsTable = '';
+            if (productos.length > 0) {
+                productsTable = `
+                    <table class="w-full text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="text-left py-2 px-3">Cant.</th>
+                                <th class="text-left py-2 px-3">Producto</th>
+                                <th class="text-right py-2 px-3">P. Unit.</th>
+                                <th class="text-right py-2 px-3">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productos.map((prod, index) => `
+                                <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                                    <td class="py-2 px-3">${prod.cantidad}</td>
+                                    <td class="py-2 px-3">${prod.descripcion}</td>
+                                    <td class="py-2 px-3 text-right">${formatCurrency(prod.precio)}</td>
+                                    <td class="py-2 px-3 text-right font-medium">${formatCurrency(prod.total)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                productsTable = '<p class="text-center text-gray-500 py-4">No hay productos agregados</p>';
+            }
+
+            // Build preview HTML
+            preview.innerHTML = `
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-primary text-white px-4 py-3">
+                        <div class="text-center">
+                            <h3 class="font-bold text-lg"><div style="display:flex; justify-content:center; align-items:center; margin-bottom:4px; width:120px; margin-left:auto; margin-right:auto;"><?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 12796 1686.41"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil0 {fill:white}
+    .fil1 {fill:white;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Capa_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_2087503259808">
+   <g>
+    <path fill="#FFFFFF" class="fil0" d="M6144.17 933.13c-28.33,30.85 -51.71,70.32 -93.76,104.86 -8.16,6.71 -13.1,10.85 -22.2,17.59 -71.78,53.03 -208.62,91.16 -303.69,97 -69.74,4.29 -149.06,-4.56 -217.55,-18.57 -18.17,-3.71 -17.89,-5.28 -26.44,9.25 -26.93,45.75 -36,112.51 -28.77,167.46 20.74,157.4 159.72,191.65 297.75,155.82 81.8,-21.24 145.95,-63.13 208.66,-111.75 7.7,-5.97 13.91,-11.14 21.36,-18.44 7.22,-7.09 14.52,-11.28 20.95,-18.92 7.83,-9.33 11.09,-11.56 20,-19.78 7.03,-6.49 11.59,-13.94 18.74,-21.11 5.9,-5.88 12.57,-14.64 18.29,-21.54 54.61,-65.69 108.92,-167.3 103.54,-257.17 -1.1,-18.46 -6.74,-53.44 -16.88,-64.72z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6083.89 909.33c-17.8,-0.42 -61.55,6.88 -106.13,5.87 -35.45,-0.8 -67.85,-4.71 -101.37,-11.46 -60.9,-12.22 -114.37,-35.67 -161.76,-62.67 -70.48,-40.18 -131.9,-91.98 -181.25,-155.41 -8.02,-10.29 -15.75,-21 -24.02,-32.06l-25.08 -32.63c-43.7,5.02 -89.38,33.44 -121.98,60.08 -25.01,20.44 -44.07,43.76 -60.47,71.67 -12.18,20.74 -23.15,49.67 -27.03,77.87 -17.29,126.01 93.82,197.34 188.52,229.23 111.04,37.4 249.52,45.36 367.31,15.44 68.32,-17.36 221.86,-81.69 253.27,-165.95z"/>
+    <path fill="#FFFFFF" class="fil0" d="M5884.47 1478.59c3.25,51.99 52.18,111.33 75.72,134.18 29.86,29.01 76.12,66.23 137.07,72.52 126.35,13.05 207.47,-90.74 245.13,-174.29 45.77,-101.57 63.87,-238.32 36.15,-358.12 -20.62,-88.96 -52.02,-146.93 -111.23,-203.85 -13,-12.5 -42.14,-36.71 -62.31,-43.69 2.68,71.59 28.74,94.99 -3.05,202.67 -16.08,54.54 -46.28,117.24 -74.27,155.66 -40.85,56.09 -57.97,78.08 -107.46,120.6 -20.94,17.98 -42.43,30.76 -66.49,47.54l-69.26 46.79z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6210.15 782.99c83.13,-11.46 115.37,-22.45 208.98,-3.75 60.45,12.09 119.15,36.5 165.43,64.33 58.6,35.26 69.61,46.76 115.29,85.66l55.9 58.11c4.45,5.59 8.63,10.35 13.04,15.98 12.25,15.66 41.15,58.99 48.83,66.96 72.99,-4.58 151.21,-70.8 184.89,-131.79 12.24,-22.16 23.22,-50.34 26.14,-80.47 11.96,-123.09 -103.24,-192.47 -194.96,-227.34 -111.01,-42.22 -248.09,-44.64 -369.56,-18.81 -57.64,12.25 -108.5,32.87 -152.76,58.93 -35.21,20.72 -89.38,66.86 -101.21,112.19z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6151.59 756.97c56.7,-101.03 138.92,-152.24 251.77,-191.44 56.24,-19.53 125.18,-31.44 189.81,-31.44 72.6,0 134.07,13.64 203.33,21.02 2.49,-11.18 8.45,-26.57 12.16,-38.52 29.92,-96.26 39.84,-213.18 -42.08,-280.36 -85.77,-70.36 -236.54,-34.79 -328.01,9.79 -22.7,11.07 -46.89,25.19 -65.4,37.78 -21.9,14.9 -41.63,28.79 -58.37,46.6l-25.84 24.79c-76.54,79.28 -153.83,198.66 -155.89,315.11 -0.41,23.81 5,72.34 18.53,86.67z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6089.22 838.08l-102.73 -62.5c-12.38,-8.32 -21.29,-15.66 -32.08,-24.05 -6.19,-4.81 -8.15,-8.82 -13.64,-13.46 -12.36,-10.4 -27.64,-34.12 -36.54,-48.57 -13.91,-22.62 -25.05,-49.93 -35.71,-76.5 -20.74,-51.73 -40.64,-116.75 -44.6,-177.98 -4.56,-70.69 13.88,-137.86 16.03,-208.5 -104.63,-38.04 -242.74,-58.7 -325.39,34.84 -33.05,37.43 -49.61,102.91 -41.31,167.84 7.44,58.11 31.77,114.05 58.01,155.44 53.78,84.79 127.23,153.18 218.66,206.69 44.06,25.79 95.73,48.36 154.15,59.54 52.49,10.04 148.23,18.81 185.16,-12.8z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6088.18 766.99c-10.03,-75.59 -19.66,-111.02 2.78,-195.34 27.54,-103.43 97.59,-204.23 170.15,-271.44 43.43,-40.24 37.76,-36.24 91.76,-72.91l31.77 -24.18c-8.79,-49.15 -53.11,-107.45 -77.76,-129.83 -32.85,-29.85 -77.45,-61.7 -139.18,-70.89 -129.28,-19.25 -208.69,81.41 -244.19,170.15 -43.16,107.99 -53.61,239.62 -20.86,359.27 15.04,54.96 37.48,106.22 66.12,143.85 27.86,36.61 71.97,79.35 119.42,91.32z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6230.38 843.62c3.36,6.84 49.47,37.52 59.3,45.06 64.44,49.53 97.48,106.2 127.54,187.42 36.32,98.21 41.57,218.06 23.61,323.16 -2.41,14.03 -7.83,31.42 -8.81,43.89 13.13,10.61 54.93,28.22 74.22,34.42 28.78,9.23 57.88,15.8 90.74,17.11 193.32,7.72 302.63,-165.15 182.48,-368.13 -17.59,-29.7 -45.1,-69.31 -67.17,-95.77 -8.92,-10.72 -16.84,-19.2 -25.27,-29.01 -28.96,-33.68 -79.82,-73.62 -119.23,-97.96 -71.26,-44.03 -205.24,-96.75 -296.33,-75.63 -17.79,4.14 -27.46,10.61 -41.08,15.43z"/>
+   </g>
+   <path fill="#FFFFFF" class="fil1" d="M780.12 1625.28c-107.92,0 -209.01,-20.48 -303.27,-61.43 -94.26,-40.95 -176.83,-96.86 -247.68,-167.72 -70.87,-70.87 -126.78,-153.43 -167.73,-247.69 -40.95,-94.26 -61.43,-195.35 -61.43,-303.27 0,-107.92 20.48,-209.67 61.43,-305.23 40.95,-95.56 96.86,-178.78 167.73,-249.63 70.85,-70.87 153.42,-126.78 247.68,-167.73 94.26,-40.95 195.35,-61.43 303.27,-61.43 105.31,0 205.43,19.83 300.36,59.48 94.9,39.66 179.42,96.54 253.54,170.65l-273.05 273.05c-37.71,-37.71 -80.61,-65.99 -128.72,-84.84 -48.12,-18.86 -98.82,-28.28 -152.13,-28.28 -53.31,0 -104.01,10.4 -152.12,31.2 -48.11,20.81 -90.04,48.77 -125.8,83.87 -35.75,35.11 -64.03,76.71 -84.84,124.82 -20.81,48.11 -31.21,99.47 -31.21,154.08 0,54.61 10.4,105.96 31.21,154.07 20.81,48.12 49.09,89.72 84.84,124.83 35.76,35.1 77.69,63.05 125.8,83.86 48.11,20.81 98.81,31.21 152.12,31.21 53.31,0 104.01,-10.08 152.13,-30.23 48.11,-20.16 91.01,-49.09 128.72,-86.79l273.05 273.05c-74.12,74.11 -158.63,130.99 -253.54,170.65 -94.92,39.66 -195.04,59.48 -300.36,59.48zm1215.05 0c-107.92,0 -209.01,-20.48 -303.27,-61.43 -94.26,-40.95 -176.83,-96.86 -247.69,-167.72 -70.86,-70.87 -126.77,-153.43 -167.72,-247.69 -40.95,-94.26 -61.44,-195.35 -61.44,-303.27 0,-106.62 20.49,-207.38 61.44,-302.3 40.95,-94.91 96.86,-177.8 167.72,-248.66 70.86,-70.86 153.43,-126.77 247.69,-167.72 94.26,-40.96 195.35,-61.44 303.27,-61.44 106.61,0 207.38,20.48 302.29,61.44 94.92,40.95 177.81,96.86 248.67,167.72 70.86,70.86 126.77,153.75 167.72,248.66 40.95,94.92 61.44,195.68 61.44,302.3 0,107.92 -20.49,209.01 -61.44,303.27 -40.95,94.26 -96.86,176.82 -167.72,247.69 -70.86,70.86 -153.75,126.77 -248.67,167.72 -94.91,40.95 -195.68,61.43 -302.29,61.43zm0 -1170.19c-54.61,0 -105.97,10.41 -154.08,31.21 -48.11,20.81 -89.71,48.76 -124.82,83.87 -35.1,35.1 -63.06,76.38 -83.86,123.84 -20.81,47.46 -31.21,97.84 -31.21,151.15 0,54.61 10.4,105.96 31.21,154.07 20.8,48.12 48.76,89.72 83.86,124.83 35.11,35.1 76.71,63.05 124.82,83.86 48.11,20.81 99.47,31.21 154.08,31.21 53.31,0 103.69,-10.4 151.15,-31.21 47.46,-20.81 88.74,-48.76 123.84,-83.86 35.11,-35.11 63.06,-76.71 83.87,-124.83 20.8,-48.11 31.21,-99.46 31.21,-154.07 0,-53.31 -10.41,-103.69 -31.21,-151.15 -20.81,-47.46 -48.76,-88.74 -83.87,-123.84 -35.1,-35.11 -76.38,-63.06 -123.84,-83.87 -47.46,-20.8 -97.84,-31.21 -151.15,-31.21zm1538.8 -390.07c96.21,0 186.9,18.53 272.07,55.59 85.17,37.06 159.28,87.43 222.34,151.15 63.06,63.71 112.79,138.15 149.19,223.3 36.41,85.18 54.61,175.86 54.61,272.08 0,96.21 -18.2,186.9 -54.61,272.07 -36.4,85.17 -86.13,159.27 -149.19,222.33 -63.06,63.07 -137.18,112.79 -222.34,149.2 -85.17,36.41 -175.85,54.61 -272.07,54.61 -57.21,0 -112.46,-6.5 -165.78,-19.5 -53.31,-13.01 -103.36,-31.22 -150.17,-54.62l0 234.04 -386.16 0 0 -858.13c0,-96.21 18.2,-186.9 54.61,-272.08 36.4,-85.16 86.46,-159.59 150.17,-223.3 63.71,-63.72 138.15,-114.09 223.31,-151.15 85.16,-37.06 176.5,-55.59 274.01,-55.59zm0 1018.07c42.91,0 83.22,-8.45 120.93,-25.35 37.7,-16.9 70.86,-39.66 99.46,-68.26 28.61,-28.6 51.03,-62.08 67.29,-100.44 16.25,-38.36 24.38,-78.99 24.38,-121.89 0,-44.21 -8.13,-85.49 -24.38,-123.85 -16.25,-38.36 -38.68,-71.83 -67.29,-100.44 -28.6,-28.61 -61.76,-51.03 -99.46,-67.29 -37.71,-16.25 -78.01,-24.37 -120.93,-24.37 -44.2,0 -85.48,8.12 -123.84,24.37 -38.36,16.25 -71.84,38.68 -100.44,67.29 -28.61,28.61 -51.03,62.08 -67.29,100.44 -16.25,38.36 -24.38,79.64 -24.38,123.85 0,42.9 8.13,83.54 24.38,121.89 16.25,38.36 38.68,71.84 67.29,100.44 28.6,28.61 62.08,51.36 100.44,68.26 38.36,16.9 79.64,25.35 123.84,25.35zm1876.2 -1016.11l-462.22 754.77 0 803.52 -382.26 0 0 -803.52 -475.88 -756.73 456.37 0 210.64 339.36 210.64 -339.36 442.72 1.96zm2451.54 -1.96c96.21,0 186.91,18.53 272.07,55.59 85.17,37.06 159.28,87.43 222.34,151.15 63.06,63.71 112.79,138.15 149.19,223.3 36.41,85.18 54.61,175.86 54.61,272.08 0,96.21 -18.2,186.9 -54.61,272.07 -36.4,85.17 -86.13,159.27 -149.19,222.33 -63.06,63.07 -137.18,112.79 -222.34,149.2 -85.16,36.41 -175.85,54.61 -272.07,54.61 -57.21,0 -112.46,-6.5 -165.78,-19.5 -53.31,-13.01 -103.36,-31.22 -150.17,-54.62l0 234.04 -386.16 0 0 -858.13c0,-96.21 18.2,-186.9 54.61,-272.08 36.4,-85.16 86.46,-159.59 150.17,-223.3 63.71,-63.72 138.15,-114.09 223.31,-151.15 85.16,-37.06 176.5,-55.59 274.01,-55.59zm0 1018.07c42.91,0 83.22,-8.45 120.93,-25.35 37.7,-16.9 70.86,-39.66 99.46,-68.26 28.61,-28.6 51.03,-62.08 67.29,-100.44 16.25,-38.36 24.38,-78.99 24.38,-121.89 0,-44.21 -8.13,-85.49 -24.38,-123.85 -16.25,-38.36 -38.68,-71.83 -67.29,-100.44 -28.6,-28.61 -61.76,-51.03 -99.46,-67.29 -37.71,-16.25 -78.01,-24.37 -120.93,-24.37 -44.2,0 -85.48,8.12 -123.84,24.37 -38.36,16.25 -71.84,38.68 -100.44,67.29 -28.61,28.61 -51.03,62.08 -67.29,100.44 -16.25,38.36 -24.38,79.64 -24.38,123.85 0,42.9 8.13,83.54 24.38,121.89 16.25,38.36 38.68,71.84 67.29,100.44 28.6,28.61 62.08,51.36 100.44,68.26 38.36,16.9 79.64,25.35 123.84,25.35zm1616.81 -624.09c-11.7,-3.91 -24.05,-6.17 -37.05,-6.83 -13.01,-0.65 -26.66,-0.97 -40.96,-0.97 -55.91,0 -108.56,10.72 -157.97,32.17 -49.4,21.46 -92.64,50.71 -129.7,87.76 -37.06,37.06 -66.64,80.62 -88.74,130.67 -22.1,50.05 -33.15,103.05 -33.15,158.95l0 764.52 -382.26 0 0 -764.52c0,-110.52 20.81,-213.88 62.41,-310.1 41.61,-96.21 98.17,-180.4 169.68,-252.56 71.51,-72.17 155.38,-129.05 251.59,-170.66 96.21,-41.6 198.93,-62.41 308.15,-62.41 66.32,0 130.99,8.13 194.06,24.38 63.05,16.25 123.19,39.33 180.4,69.23l-296.45 300.36zm538.29 -393.97l0 1560.25 -386.17 0 0 -1177.99 386.17 -382.26zm1515.39 1560.25l-382.26 0 0 -838.64c0,-46.8 -8.77,-90.69 -26.32,-131.64 -17.56,-40.95 -41.61,-76.38 -72.16,-106.29 -30.57,-29.91 -66.32,-53.64 -107.27,-71.19 -40.95,-17.55 -84.19,-26.32 -129.7,-26.32 -46.81,0 -90.7,8.77 -131.65,26.32 -40.95,17.55 -77.03,41.28 -108.24,71.19 -31.21,29.91 -55.58,65.34 -73.14,106.29 -17.55,40.95 -26.33,84.85 -26.33,131.64l0 838.64 -382.25 0 0 -838.64c0,-98.81 18.85,-192.1 56.56,-279.87 37.71,-87.76 89.39,-164.48 155.05,-230.13 65.66,-65.67 142.05,-117.34 229.16,-155.05 87.11,-37.71 180.73,-56.57 280.85,-56.57 98.81,0 192.11,18.86 279.87,56.57 87.76,37.71 163.83,89.38 228.19,155.05 64.36,65.66 115.39,142.37 153.1,230.13 37.71,87.77 56.56,181.06 56.56,279.87l0 838.64zm877.64 -1174.08l-198.93 0 0 1174.08 -386.17 0 0 -1174.08 -374.45 0 0 -386.17 1345.71 0 -386.16 386.17z"/>
+  </g>
+ </g>
+</svg>
+</div></h3>
+                            <p class="text-sm">ORD-${document.getElementById('orderNumber').textContent}</p>
+                            <p class="text-xs mt-1">Tel: 0994 711 183 · Monseñor Moreno y Capitán Medina</p>
+                            <div class="flex justify-center gap-3 mt-1 text-lg">
+                                <i class="fab fa-facebook-square"></i>
+                                <i class="fab fa-instagram"></i>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs mt-2">
+                            <div>
+                                <p>Fecha recepción: ${formatDate(fechaRecepcion)}</p>
+                            </div>
+                            <div class="text-right">
+                                <p>Fecha entrega: ${formatDate(fechaEntrega)} ${horaEntrega ? 'a las ' + horaEntrega : ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Info -->
+                    <div class="px-4 py-3 bg-gray-50 border-b">
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <p><strong>Cliente:</strong> ${cliente}</p>
+                                <p><strong>Teléfono:</strong> ${telefono}</p>
+                            </div>
+                            <div class="text-right">
+                                <p><strong>Asesor:</strong> ${asesor}</p>
+                                ${requiereFactura === 'si' ? `<p><strong>Factura:</strong> Sí</p>` : ''}
+                            </div>
+                        </div>
+                        ${detallesAdicionales ? `
+                            <div class="mt-2 pt-2 border-t text-xs">
+                                <p><strong>Detalles adicionales:</strong> ${detallesAdicionales}</p>
+                            </div>
+                        ` : ''}
+                        ${requiereFactura === 'si' && (facturaNombre || facturaRuc) ? `
+                            <div class="mt-2 pt-2 border-t text-xs">
+                                <p><strong>Facturación:</strong></p>
+                                ${facturaNombre ? `<p>Nombre: ${facturaNombre}</p>` : ''}
+                                ${facturaRuc ? `<p>RUC: ${facturaRuc}</p>` : ''}
+                                ${facturaDireccion ? `<p>Dirección: ${facturaDireccion}</p>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Products -->
+                    <div class="px-4 py-3">
+                        ${productsTable}
+                    </div>
+                    
+                    <!-- Totals -->
+                    <div class="px-4 py-3 bg-gray-50 border-t">
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span>Total:</span>
+                                <span class="font-bold">${formatCurrency(costoTotal)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Entrega efectivo:</span>
+                                <span>${formatCurrency(entregaEfectivo)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Entrega transferencia:</span>
+                                <span>${formatCurrency(entregaTransferencia)}</span>
+                            </div>
+                            <div class="flex justify-between border-t pt-1">
+                                <span class="font-bold">Saldo:</span>
+                                <span class="font-bold ${saldo > 0 ? 'text-red-600' : 'text-green-600'}">${formatCurrency(saldo)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // --- Aviso legal en la vista previa ---
+            const avisoHtml = `
+                <div class="px-4 py-3 bg-white border-t">
+                    <div class="mt-2 text-[11px] leading-snug text-gray-700">
+                        <p class="font-semibold">INFORMACIÓN:</p>
+                        <ul class="list-decimal ml-5 mt-1 space-y-1"><li>No se aceptan reintregos de seña en efectivo pasadas las 24hs</li>
+                            <li>Una vez aprobado el diseño, no se aceptan cambios ni devoluciones. Por favor, revise cuidadosamente antes de confirmar.</li></ul>
+                    </div>
+                </div>
+            `;
+            const tarjeta = preview.querySelector('.bg-white.rounded-lg.shadow-sm.overflow-hidden');
+            if (tarjeta) tarjeta.insertAdjacentHTML('beforeend', avisoHtml);
+
+        }
+
+        // Save order - MEJORADO CON NUMERACIÓN AUTOMÁTICA
+        function saveOrder() {
+            try {
+                // Verificar si estamos editando una orden existente
+                const isEditing = editingOrderId;
+                let orderNumber;
+                
+                if (isEditing) {
+                    // Si estamos editando, mantener el número de orden original
+                    const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                    const existingOrder = savedOrders.find(o => o.id === editingOrderId);
+                    orderNumber = existingOrder ? existingOrder.orderNumber : getNextOrderNumber();
+                } else {
+                    // Si es una nueva orden, obtener el siguiente número disponible
+                    orderNumber = getNextOrderNumber();
+                }
+                
+                const orderData = {
+                    id: isEditing || Date.now().toString(),
+                    orderNumber: orderNumber,
+                    cliente: document.getElementById('cliente').value,
+                    telefono: document.getElementById('telefono').value,
+                    asesor: document.getElementById('asesor').value,
+                    fechaRecepcion: document.getElementById('fechaRecepcion').value,
+                    fechaEntrega: document.getElementById('fechaEntrega').value,
+                    horaEntrega: document.getElementById('horaEntrega').value,
+                    costoTotal: parseFloat(document.getElementById('costoTotal').value) || 0,
+                    entregaEfectivo: parseFloat(document.getElementById('entregaEfectivo').value) || 0,
+                    entregaTransferencia: parseFloat(document.getElementById('entregaTransferencia').value) || 0,
+                    saldo: parseFloat(document.getElementById('saldo').value) || 0,
+                    requiereFactura: document.getElementById('requiereFactura').value,
+                    facturaNombre: document.getElementById('facturaNombre').value,
+                    facturaRuc: document.getElementById('facturaRuc').value,
+                    facturaDireccion: document.getElementById('facturaDireccion').value,
+                    detallesAdicionales: document.getElementById('detallesAdicionales').value,
+                    estado: 'PENDIENTE', // Estado por defecto
+                    fechaCreacion: new Date().toISOString(),
+                    productos: []
+                };
+
+                // Recopilar productos
+                const filas = document.querySelectorAll('#orderTableBody tr');
+                filas.forEach(fila => {
+                    const cantidad = fila.querySelector('.cantidad').value;
+                    const descripcion = fila.querySelector('.descripcion').value;
+                    const precio = fila.querySelector('.precio').value;
+                    const total = fila.querySelector('.total').value;
+                    
+                    if (cantidad && descripcion && precio) {
+                        orderData.productos.push({
+                            cantidad: parseInt(cantidad),
+                            descripcion: descripcion,
+                            precio: parseFloat(precio),
+                            total: parseFloat(total)
+                        });
+                    }
+                });
+
+                // Guardar en localStorage
+                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                
+                if (isEditing) {
+                    // Actualizar orden existente
+                    const index = savedOrders.findIndex(o => o.id === editingOrderId);
+                    if (index !== -1) {
+                        savedOrders[index] = orderData;
+                    }
+                    editingOrderId = null;
+                } else {
+                    // Agregar nueva orden
+                    savedOrders.push(orderData);
+                }
+                
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                
+                alert(isEditing ? 'Orden actualizada exitosamente' : 'Orden guardada exitosamente');
+                
+                if (!isEditing) {
+                    resetForm();
+                }
+                
+                loadSavedOrders();
+                
+            } catch (error) {
+                console.error('Error al guardar la orden:', error);
+                alert('Error al guardar la orden. Por favor, inténtelo de nuevo.');
+            }
+        }
+
+        // Load saved orders
+        function loadSavedOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            renderOrdersTable(savedOrders);
+        }
+
+        // Filter orders based on search term
+        function filterOrders() {
+            const searchTerm = document.getElementById('searchOrders').value.toLowerCase();
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const filteredOrders = savedOrders.filter(order => 
+                order.cliente.toLowerCase().includes(searchTerm) ||
+                order.telefono.toLowerCase().includes(searchTerm) ||
+                order.asesor.toLowerCase().includes(searchTerm)
+            );
+            
+            renderOrdersTable(filteredOrders);
+        }
+
+        // Render orders table with given orders array
+        function renderOrdersTable(orders) {
+            const tableBody = document.getElementById('savedOrdersTableBody');
+            const noOrdersMessage = document.getElementById('noOrdersMessage');
+            
+            tableBody.innerHTML = '';
+            
+            if (orders.length === 0) {
+                noOrdersMessage.classList.remove('hidden');
+                return;
+            }
+            
+            noOrdersMessage.classList.add('hidden');
+            
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                
+                const estado = order.saldo > 0 ? 'Pendiente' : 'Pagado';
+                const estadoClass = order.saldo > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4 font-medium">ORD-${String(order.orderNumber).padStart(5, '0')}</td>
+                    <td class="py-3 px-4">${order.cliente}</td>
+                    <td class="py-3 px-4">${order.telefono}</td>
+                    <td class="py-3 px-4">${order.asesor}</td>
+                    <td class="py-3 px-4">${formatDate(order.fechaEntrega)}</td>
+                    <td class="py-3 px-4 font-medium">${formatCurrency(order.costoTotal)}</td>
+                    <td class="py-3 px-4 font-medium ${order.saldo > 0 ? 'text-red-600' : 'text-green-600'}">${formatCurrency(order.saldo)}</td>
+                    <td class="py-3 px-4">
+                        <select class="status-select text-xs font-semibold px-2 py-1 rounded-full border-none outline-none cursor-pointer" 
+                                data-order-id="${order.id}" 
+                                onchange="updateOrderStatus('${order.id}', this.value)"
+                                style="background-color: ${getStatusColor(order.estado || 'PENDIENTE')}; color: white;">
+                            <option value="PENDIENTE" ${(order.estado || 'PENDIENTE') === 'PENDIENTE' ? 'selected' : ''}>PENDIENTE</option>
+                            <option value="PREPARANDO" ${(order.estado || 'PENDIENTE') === 'PREPARANDO' ? 'selected' : ''}>PREPARANDO</option>
+                            <option value="LISTO" ${(order.estado || 'PENDIENTE') === 'LISTO' ? 'selected' : ''}>LISTO</option>
+                            <option value="ENTREGADO" ${(order.estado || 'PENDIENTE') === 'ENTREGADO' ? 'selected' : ''}>ENTREGADO</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button type="button" class="bg-blue-500 text-white p-1 rounded hover:bg-blue-600 text-xs" onclick="viewOrder('${order.id}')" title="Ver">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" class="bg-orange-500 text-white p-1 rounded hover:bg-orange-600 text-xs" onclick="editOrder('${order.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="bg-green-500 text-white p-1 rounded hover:bg-green-600 text-xs" onclick="copyOrderToExcel('${order.id}')" title="Copiar para Excel">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button type="button" class="bg-red-500 text-white p-1 rounded hover:bg-red-600 text-xs" onclick="deleteOrder('${order.id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <button type="button" class="bg-purple-500 text-white p-1 rounded hover:bg-purple-600 text-xs" onclick="downloadOrderAsImage('${order.id}')" title="Descargar como imagen">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Get status color
+        function getStatusColor(estado) {
+            switch (estado) {
+                case 'PENDIENTE': return '#f59e0b';
+                case 'PREPARANDO': return '#3b82f6';
+                case 'LISTO': return '#10b981';
+                case 'ENTREGADO': return '#6b7280';
+                default: return '#f59e0b';
+            }
+        }
+
+        // Update order status
+        function updateOrderStatus(orderId, newStatus) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const orderIndex = savedOrders.findIndex(order => order.id === orderId);
+            
+            if (orderIndex !== -1) {
+                savedOrders[orderIndex].estado = newStatus;
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                
+                // Update the select background color
+                const selectElement = document.querySelector(`select[data-order-id="${orderId}"]`);
+                if (selectElement) {
+                    selectElement.style.backgroundColor = getStatusColor(newStatus);
+                }
+            }
+        }
+
+        // View order
+        function viewOrder(orderId) {
+            loadOrder(orderId);
+            showNewOrderSection();
+        }
+
+        // Edit order
+        function editOrder(orderId) {
+            editingOrderId = orderId;
+            loadOrder(orderId);
+            showNewOrderSection();
+        }
+
+        // Load order data into form
+        function loadOrder(orderId) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const order = savedOrders.find(o => o.id === orderId);
+            
+            if (!order) {
+                alert('Orden no encontrada');
+                return;
+            }
+
+            // Load basic data
+            document.getElementById('orderNumber').textContent = String(order.orderNumber).padStart(5, '0');
+            document.getElementById('cliente').value = order.cliente || '';
+            document.getElementById('telefono').value = order.telefono || '';
+            document.getElementById('asesor').value = order.asesor || '';
+            document.getElementById('fechaRecepcion').value = order.fechaRecepcion || '';
+            document.getElementById('fechaEntrega').value = order.fechaEntrega || '';
+            document.getElementById('horaEntrega').value = order.horaEntrega || '';
+            document.getElementById('costoTotal').value = order.costoTotal || 0;
+            document.getElementById('entregaEfectivo').value = order.entregaEfectivo || 0;
+            document.getElementById('entregaTransferencia').value = order.entregaTransferencia || 0;
+            document.getElementById('saldo').value = order.saldo || 0;
+            document.getElementById('requiereFactura').value = order.requiereFactura || 'no';
+            document.getElementById('facturaNombre').value = order.facturaNombre || '';
+            document.getElementById('facturaRuc').value = order.facturaRuc || '';
+            document.getElementById('facturaDireccion').value = order.facturaDireccion || '';
+            document.getElementById('detallesAdicionales').value = order.detallesAdicionales || '';
+
+            // Toggle factura fields
+            toggleFacturaFields(document.getElementById('requiereFactura'));
+
+            // Load products
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+            
+            if (order.productos && order.productos.length > 0) {
+                order.productos.forEach(producto => {
+                    const row = document.createElement('tr');
+                    row.className = 'product-row border-b border-gray-200';
+                    row.innerHTML = `
+                        <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="1" value="${producto.cantidad}" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" value="${producto.descripcion}"></td>
+                        <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="0" step="1" value="${producto.precio}" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2" value="${producto.total}" readonly></td>
+                        <td class="py-3 px-2"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                // Add default row if no products
+                agregarFila();
+            }
+
+            updateOrderPreview();
+        }
+
+        // Delete order
+        function deleteOrder(orderId) {
+            if (confirm('¿Está seguro de que desea eliminar esta orden?')) {
+                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                const filteredOrders = savedOrders.filter(order => order.id !== orderId);
+                localStorage.setItem('savedOrders', JSON.stringify(filteredOrders));
+                loadSavedOrders();
+            }
+        }
+
+        // Clear all orders
+        function clearAllOrders() {
+            if (confirm('¿Está seguro de que desea eliminar todas las órdenes guardadas?')) {
+                localStorage.removeItem('savedOrders');
+                loadSavedOrders();
+            }
+        }
+
+        // Print order
+        function printOrder() {
+            const printContainer = document.getElementById('printContainer');
+            const orderPreview = document.getElementById('orderPreview').innerHTML;
+            
+            printContainer.innerHTML = `
+                <div class="print-section">
+                    ${orderPreview}
+                </div>
+                <div class="print-section">
+                    ${orderPreview}
+                </div>
+            `;
+            
+            printContainer.classList.remove('hidden');
+            window.print();
+            printContainer.classList.add('hidden');
+        }
+
+        // Reset form
+        function resetForm() {
+            if (confirm('¿Está seguro de que desea limpiar el formulario?')) {
+                // Reset editing state
+                editingOrderId = null;
+                
+                // Reset form fields
+                document.getElementById('cliente').value = '';
+                document.getElementById('telefono').value = '';
+                document.getElementById('asesor').value = '';
+                document.getElementById('fechaEntrega').value = '';
+                document.getElementById('horaEntrega').value = '';
+                document.getElementById('entregaEfectivo').value = '';
+                document.getElementById('entregaTransferencia').value = '';
+                document.getElementById('detallesAdicionales').value = '';
+                document.getElementById('requiereFactura').value = 'no';
+                document.getElementById('facturaNombre').value = '';
+                document.getElementById('facturaRuc').value = '';
+                document.getElementById('facturaDireccion').value = '';
+                
+                toggleFacturaFields(document.getElementById('requiereFactura'));
+                
+                // Reset products table
+                const tbody = document.getElementById('orderTableBody');
+                tbody.innerHTML = `
+                    <tr class="product-row border-b border-gray-200">
+                        <td class="py-3 px-4"><input type="number" class="cantidad w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="1" value="1" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="text" class="descripcion w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" placeholder="Descripción"></td>
+                        <td class="py-3 px-4"><input type="number" class="precio w-full bg-gray-50 border border-gray-300 rounded py-1 px-2 input-focus" min="0" step="1" placeholder="0" oninput="calcularFila(this)"></td>
+                        <td class="py-3 px-4"><input type="number" class="total w-full bg-gray-100 border border-gray-300 rounded py-1 px-2" readonly></td>
+                        <td class="py-3 px-2"><button type="button" class="delete-btn bg-red-500 text-white p-1 rounded hover:bg-red-600" onclick="eliminarFila(this)"><i class="fas fa-trash text-xs"></i></button></td>
+                    </tr>
+                `;
+                
+                // Reset order number to next available
+                updateOrderNumberDisplay();
+                
+                calcularTotal();
+                updateOrderPreview();
+            }
+        }
+
+        // Update profile image
+        function updateProfileImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profileImage').src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-PY', {
+                style: 'currency',
+                currency: 'PYG',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'No especificada';
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString('es-EC', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        // Función para copiar datos de la orden en formato Excel horizontal
+        function copyOrderToExcel(orderId) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const order = savedOrders.find(o => o.id === orderId);
+            
+            if (!order) {
+                alert('Orden no encontrada');
+                return;
+            }
+
+            // Construir la fila de datos según el formato solicitado
+            let excelData = [];
+            
+            // Datos principales de la orden
+            excelData.push(order.estado || 'PENDIENTE'); // ESTADO
+            excelData.push(`ORD-${String(order.orderNumber).padStart(5, '0')}`); // ORDEN
+            excelData.push(order.asesor || ''); // ASESOR
+            excelData.push(order.cliente || ''); // NOMBRE DEL CLIENTE
+            excelData.push(order.telefono || ''); // TELÉFONO
+            excelData.push(order.fechaRecepcion || ''); // FECHA DE RECEPCIÓN
+            excelData.push(order.fechaEntrega || ''); // FECHA DE ENTREGA
+            excelData.push(order.costoTotal || 0); // TOTAL A PAGAR
+            excelData.push((order.entregaEfectivo || 0) + (order.entregaTransferencia || 0)); // SEÑA
+            excelData.push(order.saldo || 0); // SALDO
+
+            // Agregar productos en formato: CANTIDAD, PRODUCTO, PRECIO UNITARIO, PRECIO TOTAL
+            if (order.productos && order.productos.length > 0) {
+                order.productos.forEach(producto => {
+                    excelData.push(producto.cantidad || 0); // CANTIDAD
+                    excelData.push(producto.descripcion || ''); // PRODUCTO
+                    excelData.push(producto.precio || 0); // PRECIO UNITARIO
+                    excelData.push(producto.total || 0); // PRECIO TOTAL
+                });
+            }
+
+            // Convertir a texto separado por tabulaciones para Excel
+            const textToCopy = excelData.join('\t');
+
+            // Copiar al portapapeles
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert('Datos copiados al portapapeles. Puedes pegarlos en Excel con Ctrl+V');
+            }).catch(err => {
+                // Fallback para navegadores que no soportan clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Datos copiados al portapapeles. Puedes pegarlos en Excel con Ctrl+V');
+            });
+        }
+        
+        // Función para descargar la orden como imagen JPG
+        function downloadOrderAsImage(orderId) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const order = savedOrders.find(o => o.id === orderId);
+            
+            if (!order) {
+                alert('Orden no encontrada');
+                return;
+            }
+
+            // Crear un contenedor temporal para la imagen
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.top = '-9999px';
+            tempContainer.style.width = '400px';
+            tempContainer.style.backgroundColor = 'white';
+            tempContainer.style.fontFamily = 'Inter, sans-serif';
+            tempContainer.style.fontSize = '14px';
+            tempContainer.style.lineHeight = '1.4';
+            
+            // Construir el HTML de la vista previa
+            let productsTable = '';
+            if (order.productos && order.productos.length > 0) {
+                productsTable = `
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <thead>
+                            <tr style="background-color: #f3f4f6;">
+                                <th style="text-align: left; padding: 8px; font-weight: bold; font-size: 12px;">Cant.</th>
+                                <th style="text-align: left; padding: 8px; font-weight: bold; font-size: 12px;">Producto</th>
+                                <th style="text-align: right; padding: 8px; font-weight: bold; font-size: 12px;">P. Unit.</th>
+                                <th style="text-align: right; padding: 8px; font-weight: bold; font-size: 12px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${order.productos.map((prod, index) => `
+                                <tr style="background-color: ${index % 2 === 0 ? 'white' : '#f9fafb'};">
+                                    <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${prod.cantidad}</td>
+                                    <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${prod.descripcion}</td>
+                                    <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb;">${formatCurrency(prod.precio)}</td>
+                                    <td style="padding: 8px; text-align: right; font-weight: bold; border-bottom: 1px solid #e5e7eb;">${formatCurrency(prod.total)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            tempContainer.innerHTML = `
+                <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 16px; text-align: center;">
+                        <h3 style="font-weight: bold; font-size: 18px; margin: 0;"><div style="display:flex; justify-content:center; align-items:center; margin-bottom:4px; width:120px; margin-left:auto; margin-right:auto;"><?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 12796 1686.41"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil0 {fill:white}
+    .fil1 {fill:white;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Capa_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_2087503259808">
+   <g>
+    <path fill="#FFFFFF" class="fil0" d="M6144.17 933.13c-28.33,30.85 -51.71,70.32 -93.76,104.86 -8.16,6.71 -13.1,10.85 -22.2,17.59 -71.78,53.03 -208.62,91.16 -303.69,97 -69.74,4.29 -149.06,-4.56 -217.55,-18.57 -18.17,-3.71 -17.89,-5.28 -26.44,9.25 -26.93,45.75 -36,112.51 -28.77,167.46 20.74,157.4 159.72,191.65 297.75,155.82 81.8,-21.24 145.95,-63.13 208.66,-111.75 7.7,-5.97 13.91,-11.14 21.36,-18.44 7.22,-7.09 14.52,-11.28 20.95,-18.92 7.83,-9.33 11.09,-11.56 20,-19.78 7.03,-6.49 11.59,-13.94 18.74,-21.11 5.9,-5.88 12.57,-14.64 18.29,-21.54 54.61,-65.69 108.92,-167.3 103.54,-257.17 -1.1,-18.46 -6.74,-53.44 -16.88,-64.72z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6083.89 909.33c-17.8,-0.42 -61.55,6.88 -106.13,5.87 -35.45,-0.8 -67.85,-4.71 -101.37,-11.46 -60.9,-12.22 -114.37,-35.67 -161.76,-62.67 -70.48,-40.18 -131.9,-91.98 -181.25,-155.41 -8.02,-10.29 -15.75,-21 -24.02,-32.06l-25.08 -32.63c-43.7,5.02 -89.38,33.44 -121.98,60.08 -25.01,20.44 -44.07,43.76 -60.47,71.67 -12.18,20.74 -23.15,49.67 -27.03,77.87 -17.29,126.01 93.82,197.34 188.52,229.23 111.04,37.4 249.52,45.36 367.31,15.44 68.32,-17.36 221.86,-81.69 253.27,-165.95z"/>
+    <path fill="#FFFFFF" class="fil0" d="M5884.47 1478.59c3.25,51.99 52.18,111.33 75.72,134.18 29.86,29.01 76.12,66.23 137.07,72.52 126.35,13.05 207.47,-90.74 245.13,-174.29 45.77,-101.57 63.87,-238.32 36.15,-358.12 -20.62,-88.96 -52.02,-146.93 -111.23,-203.85 -13,-12.5 -42.14,-36.71 -62.31,-43.69 2.68,71.59 28.74,94.99 -3.05,202.67 -16.08,54.54 -46.28,117.24 -74.27,155.66 -40.85,56.09 -57.97,78.08 -107.46,120.6 -20.94,17.98 -42.43,30.76 -66.49,47.54l-69.26 46.79z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6210.15 782.99c83.13,-11.46 115.37,-22.45 208.98,-3.75 60.45,12.09 119.15,36.5 165.43,64.33 58.6,35.26 69.61,46.76 115.29,85.66l55.9 58.11c4.45,5.59 8.63,10.35 13.04,15.98 12.25,15.66 41.15,58.99 48.83,66.96 72.99,-4.58 151.21,-70.8 184.89,-131.79 12.24,-22.16 23.22,-50.34 26.14,-80.47 11.96,-123.09 -103.24,-192.47 -194.96,-227.34 -111.01,-42.22 -248.09,-44.64 -369.56,-18.81 -57.64,12.25 -108.5,32.87 -152.76,58.93 -35.21,20.72 -89.38,66.86 -101.21,112.19z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6151.59 756.97c56.7,-101.03 138.92,-152.24 251.77,-191.44 56.24,-19.53 125.18,-31.44 189.81,-31.44 72.6,0 134.07,13.64 203.33,21.02 2.49,-11.18 8.45,-26.57 12.16,-38.52 29.92,-96.26 39.84,-213.18 -42.08,-280.36 -85.77,-70.36 -236.54,-34.79 -328.01,9.79 -22.7,11.07 -46.89,25.19 -65.4,37.78 -21.9,14.9 -41.63,28.79 -58.37,46.6l-25.84 24.79c-76.54,79.28 -153.83,198.66 -155.89,315.11 -0.41,23.81 5,72.34 18.53,86.67z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6089.22 838.08l-102.73 -62.5c-12.38,-8.32 -21.29,-15.66 -32.08,-24.05 -6.19,-4.81 -8.15,-8.82 -13.64,-13.46 -12.36,-10.4 -27.64,-34.12 -36.54,-48.57 -13.91,-22.62 -25.05,-49.93 -35.71,-76.5 -20.74,-51.73 -40.64,-116.75 -44.6,-177.98 -4.56,-70.69 13.88,-137.86 16.03,-208.5 -104.63,-38.04 -242.74,-58.7 -325.39,34.84 -33.05,37.43 -49.61,102.91 -41.31,167.84 7.44,58.11 31.77,114.05 58.01,155.44 53.78,84.79 127.23,153.18 218.66,206.69 44.06,25.79 95.73,48.36 154.15,59.54 52.49,10.04 148.23,18.81 185.16,-12.8z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6088.18 766.99c-10.03,-75.59 -19.66,-111.02 2.78,-195.34 27.54,-103.43 97.59,-204.23 170.15,-271.44 43.43,-40.24 37.76,-36.24 91.76,-72.91l31.77 -24.18c-8.79,-49.15 -53.11,-107.45 -77.76,-129.83 -32.85,-29.85 -77.45,-61.7 -139.18,-70.89 -129.28,-19.25 -208.69,81.41 -244.19,170.15 -43.16,107.99 -53.61,239.62 -20.86,359.27 15.04,54.96 37.48,106.22 66.12,143.85 27.86,36.61 71.97,79.35 119.42,91.32z"/>
+    <path fill="#FFFFFF" class="fil0" d="M6230.38 843.62c3.36,6.84 49.47,37.52 59.3,45.06 64.44,49.53 97.48,106.2 127.54,187.42 36.32,98.21 41.57,218.06 23.61,323.16 -2.41,14.03 -7.83,31.42 -8.81,43.89 13.13,10.61 54.93,28.22 74.22,34.42 28.78,9.23 57.88,15.8 90.74,17.11 193.32,7.72 302.63,-165.15 182.48,-368.13 -17.59,-29.7 -45.1,-69.31 -67.17,-95.77 -8.92,-10.72 -16.84,-19.2 -25.27,-29.01 -28.96,-33.68 -79.82,-73.62 -119.23,-97.96 -71.26,-44.03 -205.24,-96.75 -296.33,-75.63 -17.79,4.14 -27.46,10.61 -41.08,15.43z"/>
+   </g>
+   <path fill="#FFFFFF" class="fil1" d="M780.12 1625.28c-107.92,0 -209.01,-20.48 -303.27,-61.43 -94.26,-40.95 -176.83,-96.86 -247.68,-167.72 -70.87,-70.87 -126.78,-153.43 -167.73,-247.69 -40.95,-94.26 -61.43,-195.35 -61.43,-303.27 0,-107.92 20.48,-209.67 61.43,-305.23 40.95,-95.56 96.86,-178.78 167.73,-249.63 70.85,-70.87 153.42,-126.78 247.68,-167.73 94.26,-40.95 195.35,-61.43 303.27,-61.43 105.31,0 205.43,19.83 300.36,59.48 94.9,39.66 179.42,96.54 253.54,170.65l-273.05 273.05c-37.71,-37.71 -80.61,-65.99 -128.72,-84.84 -48.12,-18.86 -98.82,-28.28 -152.13,-28.28 -53.31,0 -104.01,10.4 -152.12,31.2 -48.11,20.81 -90.04,48.77 -125.8,83.87 -35.75,35.11 -64.03,76.71 -84.84,124.82 -20.81,48.11 -31.21,99.47 -31.21,154.08 0,54.61 10.4,105.96 31.21,154.07 20.81,48.12 49.09,89.72 84.84,124.83 35.76,35.1 77.69,63.05 125.8,83.86 48.11,20.81 98.81,31.21 152.12,31.21 53.31,0 104.01,-10.08 152.13,-30.23 48.11,-20.16 91.01,-49.09 128.72,-86.79l273.05 273.05c-74.12,74.11 -158.63,130.99 -253.54,170.65 -94.92,39.66 -195.04,59.48 -300.36,59.48zm1215.05 0c-107.92,0 -209.01,-20.48 -303.27,-61.43 -94.26,-40.95 -176.83,-96.86 -247.69,-167.72 -70.86,-70.87 -126.77,-153.43 -167.72,-247.69 -40.95,-94.26 -61.44,-195.35 -61.44,-303.27 0,-106.62 20.49,-207.38 61.44,-302.3 40.95,-94.91 96.86,-177.8 167.72,-248.66 70.86,-70.86 153.43,-126.77 247.69,-167.72 94.26,-40.96 195.35,-61.44 303.27,-61.44 106.61,0 207.38,20.48 302.29,61.44 94.92,40.95 177.81,96.86 248.67,167.72 70.86,70.86 126.77,153.75 167.72,248.66 40.95,94.92 61.44,195.68 61.44,302.3 0,107.92 -20.49,209.01 -61.44,303.27 -40.95,94.26 -96.86,176.82 -167.72,247.69 -70.86,70.86 -153.75,126.77 -248.67,167.72 -94.91,40.95 -195.68,61.43 -302.29,61.43zm0 -1170.19c-54.61,0 -105.97,10.41 -154.08,31.21 -48.11,20.81 -89.71,48.76 -124.82,83.87 -35.1,35.1 -63.06,76.38 -83.86,123.84 -20.81,47.46 -31.21,97.84 -31.21,151.15 0,54.61 10.4,105.96 31.21,154.07 20.8,48.12 48.76,89.72 83.86,124.83 35.11,35.1 76.71,63.05 124.82,83.86 48.11,20.81 99.47,31.21 154.08,31.21 53.31,0 103.69,-10.4 151.15,-31.21 47.46,-20.81 88.74,-48.76 123.84,-83.86 35.11,-35.11 63.06,-76.71 83.87,-124.83 20.8,-48.11 31.21,-99.46 31.21,-154.07 0,-53.31 -10.41,-103.69 -31.21,-151.15 -20.81,-47.46 -48.76,-88.74 -83.87,-123.84 -35.1,-35.11 -76.38,-63.06 -123.84,-83.87 -47.46,-20.8 -97.84,-31.21 -151.15,-31.21zm1538.8 -390.07c96.21,0 186.9,18.53 272.07,55.59 85.17,37.06 159.28,87.43 222.34,151.15 63.06,63.71 112.79,138.15 149.19,223.3 36.41,85.18 54.61,175.86 54.61,272.08 0,96.21 -18.2,186.9 -54.61,272.07 -36.4,85.17 -86.13,159.27 -149.19,222.33 -63.06,63.07 -137.18,112.79 -222.34,149.2 -85.17,36.41 -175.85,54.61 -272.07,54.61 -57.21,0 -112.46,-6.5 -165.78,-19.5 -53.31,-13.01 -103.36,-31.22 -150.17,-54.62l0 234.04 -386.16 0 0 -858.13c0,-96.21 18.2,-186.9 54.61,-272.08 36.4,-85.16 86.46,-159.59 150.17,-223.3 63.71,-63.72 138.15,-114.09 223.31,-151.15 85.16,-37.06 176.5,-55.59 274.01,-55.59zm0 1018.07c42.91,0 83.22,-8.45 120.93,-25.35 37.7,-16.9 70.86,-39.66 99.46,-68.26 28.61,-28.6 51.03,-62.08 67.29,-100.44 16.25,-38.36 24.38,-78.99 24.38,-121.89 0,-44.21 -8.13,-85.49 -24.38,-123.85 -16.25,-38.36 -38.68,-71.83 -67.29,-100.44 -28.6,-28.61 -61.76,-51.03 -99.46,-67.29 -37.71,-16.25 -78.01,-24.37 -120.93,-24.37 -44.2,0 -85.48,8.12 -123.84,24.37 -38.36,16.25 -71.84,38.68 -100.44,67.29 -28.61,28.61 -51.03,62.08 -67.29,100.44 -16.25,38.36 -24.38,79.64 -24.38,123.85 0,42.9 8.13,83.54 24.38,121.89 16.25,38.36 38.68,71.84 67.29,100.44 28.6,28.61 62.08,51.36 100.44,68.26 38.36,16.9 79.64,25.35 123.84,25.35zm1876.2 -1016.11l-462.22 754.77 0 803.52 -382.26 0 0 -803.52 -475.88 -756.73 456.37 0 210.64 339.36 210.64 -339.36 442.72 1.96zm2451.54 -1.96c96.21,0 186.91,18.53 272.07,55.59 85.17,37.06 159.28,87.43 222.34,151.15 63.06,63.71 112.79,138.15 149.19,223.3 36.41,85.18 54.61,175.86 54.61,272.08 0,96.21 -18.2,186.9 -54.61,272.07 -36.4,85.17 -86.13,159.27 -149.19,222.33 -63.06,63.07 -137.18,112.79 -222.34,149.2 -85.16,36.41 -175.85,54.61 -272.07,54.61 -57.21,0 -112.46,-6.5 -165.78,-19.5 -53.31,-13.01 -103.36,-31.22 -150.17,-54.62l0 234.04 -386.16 0 0 -858.13c0,-96.21 18.2,-186.9 54.61,-272.08 36.4,-85.16 86.46,-159.59 150.17,-223.3 63.71,-63.72 138.15,-114.09 223.31,-151.15 85.16,-37.06 176.5,-55.59 274.01,-55.59zm0 1018.07c42.91,0 83.22,-8.45 120.93,-25.35 37.7,-16.9 70.86,-39.66 99.46,-68.26 28.61,-28.6 51.03,-62.08 67.29,-100.44 16.25,-38.36 24.38,-78.99 24.38,-121.89 0,-44.21 -8.13,-85.49 -24.38,-123.85 -16.25,-38.36 -38.68,-71.83 -67.29,-100.44 -28.6,-28.61 -61.76,-51.03 -99.46,-67.29 -37.71,-16.25 -78.01,-24.37 -120.93,-24.37 -44.2,0 -85.48,8.12 -123.84,24.37 -38.36,16.25 -71.84,38.68 -100.44,67.29 -28.61,28.61 -51.03,62.08 -67.29,100.44 -16.25,38.36 -24.38,79.64 -24.38,123.85 0,42.9 8.13,83.54 24.38,121.89 16.25,38.36 38.68,71.84 67.29,100.44 28.6,28.61 62.08,51.36 100.44,68.26 38.36,16.9 79.64,25.35 123.84,25.35zm1616.81 -624.09c-11.7,-3.91 -24.05,-6.17 -37.05,-6.83 -13.01,-0.65 -26.66,-0.97 -40.96,-0.97 -55.91,0 -108.56,10.72 -157.97,32.17 -49.4,21.46 -92.64,50.71 -129.7,87.76 -37.06,37.06 -66.64,80.62 -88.74,130.67 -22.1,50.05 -33.15,103.05 -33.15,158.95l0 764.52 -382.26 0 0 -764.52c0,-110.52 20.81,-213.88 62.41,-310.1 41.61,-96.21 98.17,-180.4 169.68,-252.56 71.51,-72.17 155.38,-129.05 251.59,-170.66 96.21,-41.6 198.93,-62.41 308.15,-62.41 66.32,0 130.99,8.13 194.06,24.38 63.05,16.25 123.19,39.33 180.4,69.23l-296.45 300.36zm538.29 -393.97l0 1560.25 -386.17 0 0 -1177.99 386.17 -382.26zm1515.39 1560.25l-382.26 0 0 -838.64c0,-46.8 -8.77,-90.69 -26.32,-131.64 -17.56,-40.95 -41.61,-76.38 -72.16,-106.29 -30.57,-29.91 -66.32,-53.64 -107.27,-71.19 -40.95,-17.55 -84.19,-26.32 -129.7,-26.32 -46.81,0 -90.7,8.77 -131.65,26.32 -40.95,17.55 -77.03,41.28 -108.24,71.19 -31.21,29.91 -55.58,65.34 -73.14,106.29 -17.55,40.95 -26.33,84.85 -26.33,131.64l0 838.64 -382.25 0 0 -838.64c0,-98.81 18.85,-192.1 56.56,-279.87 37.71,-87.76 89.39,-164.48 155.05,-230.13 65.66,-65.67 142.05,-117.34 229.16,-155.05 87.11,-37.71 180.73,-56.57 280.85,-56.57 98.81,0 192.11,18.86 279.87,56.57 87.76,37.71 163.83,89.38 228.19,155.05 64.36,65.66 115.39,142.37 153.1,230.13 37.71,87.77 56.56,181.06 56.56,279.87l0 838.64zm877.64 -1174.08l-198.93 0 0 1174.08 -386.17 0 0 -1174.08 -374.45 0 0 -386.17 1345.71 0 -386.16 386.17z"/>
+  </g>
+ </g>
+</svg>
+</div></h3>
+                        <p style="font-size: 14px; margin: 4px 0;">ORD-${String(order.orderNumber).padStart(5, '0')}</p>
+                        <p style="font-size: 12px; margin: 4px 0;">Tel: 0994 711 183 · Monseñor Moreno y Capitán Medina</p>
+                        <div style="margin-top:8px; display:flex; justify-content:center; gap:12px;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M22.675 0h-21.35C.597 0 0 .598 0 1.333v21.333C0 23.403.597 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.894-4.788 4.659-4.788 1.325 0 2.463.098 2.794.142v3.24l-1.918.001c-1.504 0-1.796.716-1.796 1.765v2.315h3.587l-.467 3.622h-3.12V24h6.116C23.403 24 24 23.403 24 22.667V1.333C24 .598 23.403 0 22.675 0z"/></svg><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#FFFFFF" viewBox="0 0 24 24"><path d="M7.75 2h8.5C19.55 2 22 4.45 22 7.75v8.5C22 19.55 19.55 22 16.25 22h-8.5C4.45 22 2 19.55 2 16.25v-8.5C2 4.45 4.45 2 7.75 2zm0-2C3.477 0 0 3.477 0 7.75v8.5C0 20.523 3.477 24 7.75 24h8.5C20.523 24 24 20.523 24 16.25v-8.5C24 3.477 20.523 0 16.25 0h-8.5z"/><path d="M12 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zm0 10.162a3.999 3.999 0 1 1 0-7.998 3.999 3.999 0 0 1 0 7.998zm6.406-11.845a1.44 1.44 0 1 1-2.879 0 1.44 1.44 0 0 1 2.879 0z"/></svg></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 8px;">
+                            <div>Fecha recepción: ${formatDate(order.fechaRecepcion)}</div>
+                            <div>Fecha entrega: ${formatDate(order.fechaEntrega)} ${order.horaEntrega ? 'a las ' + order.horaEntrega : ''}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Info -->
+                    <div style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <div>
+                                <p style="margin: 2px 0;"><strong>Cliente:</strong> ${order.cliente}</p>
+                                <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${order.telefono}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin: 2px 0;"><strong>Asesor:</strong> ${order.asesor}</p>
+                                ${order.requiereFactura === 'si' ? '<p style="margin: 2px 0;"><strong>Factura:</strong> Sí</p>' : ''}
+                            </div>
+                        </div>
+                        ${order.detallesAdicionales ? `
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px;">
+                                <p style="margin: 0;"><strong>Detalles adicionales:</strong> ${order.detallesAdicionales}</p>
+                            </div>
+                        ` : ''}
+                        ${order.requiereFactura === 'si' && (order.facturaNombre || order.facturaRuc) ? `
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px;">
+                                <p style="margin: 2px 0;"><strong>Facturación:</strong></p>
+                                ${order.facturaNombre ? `<p style="margin: 2px 0;">Nombre: ${order.facturaNombre}</p>` : ''}
+                                ${order.facturaRuc ? `<p style="margin: 2px 0;">RUC: ${order.facturaRuc}</p>` : ''}
+                                ${order.facturaDireccion ? `<p style="margin: 2px 0;">Dirección: ${order.facturaDireccion}</p>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Products -->
+                    <div style="padding: 16px;">
+                        ${productsTable}
+                    </div>
+                    
+                    <!-- Totals -->
+                    <div style="padding: 16px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
+                        <div style="font-size: 14px;">
+                            <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+                                <span>Total:</span>
+                                <span style="font-weight: bold;">${formatCurrency(order.costoTotal)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+                                <span>Entrega efectivo:</span>
+                                <span>${formatCurrency(order.entregaEfectivo)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+                                <span>Entrega transferencia:</span>
+                                <span>${formatCurrency(order.entregaTransferencia)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin: 8px 0 0 0; padding-top: 8px; border-top: 1px solid #d1d5db;">
+                                <span style="font-weight: bold;">Saldo:</span>
+                                <span style="font-weight: bold; color: ${order.saldo > 0 ? '#dc2626' : '#059669'};">${formatCurrency(order.saldo)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // --- Aviso legal para la imagen exportada ---
+            tempContainer.innerHTML += `
+                <div style="padding: 8px 12px; border-top: 1px solid #e5e7eb; background: #ffffff;">
+                    <div style="margin-top: 4px; font-size: 10px; line-height: 1.4; color: #111827;">
+                        <div style="font-weight: 600;">INFORMACIÓN:</div>
+                        <ol style="margin: 4px 0 0 18px;"><li>No se aceptan reintregos de seña en efectivo pasadas las 24hs</li>
+                            <li>Una vez aprobado el diseño, no se aceptan cambios ni devoluciones. Por favor, revise cuidadosamente antes de confirmar.</li></ol>
+                    </div>
+                </div>
+            `;
+
+
+            document.body.appendChild(tempContainer);
+
+            // Usar html2canvas para convertir a imagen
+            if (typeof html2canvas !== 'undefined') {
+                html2canvas(tempContainer, {
+                    backgroundColor: 'white',
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true
+                }).then(canvas => {
+                    // Convertir a JPG y descargar
+                    const link = document.createElement('a');
+                    link.download = `orden-${String(order.orderNumber).padStart(5, '0')}.jpg`;
+                    link.href = canvas.toDataURL('image/jpeg', 0.9);
+                    link.click();
+                    
+                    // Limpiar
+                    document.body.removeChild(tempContainer);
+                }).catch(err => {
+                    console.error('Error al generar la imagen:', err);
+                    alert('Error al generar la imagen. Asegúrate de que html2canvas esté cargado.');
+                    document.body.removeChild(tempContainer);
+                });
+            } else {
+                alert('La librería html2canvas no está disponible. Se necesita para generar la imagen.');
+                document.body.removeChild(tempContainer);
+            }
+        }
+    </script>
+
+<script>
+// ===== Temporizador de Diseño (preciso en segundo plano, con 5 min gratis) =====
+(function(){
+  let startTime = null;   // timestamp en ms cuando se inició
+  let elapsed = 0;        // ms acumulados
+  let interval = null;
+  const history = [];
+
+  const $ = (id)=>document.getElementById(id);
+
+  function fmt(ms){
+    const sec = Math.floor(ms/1000);
+    const h = String(Math.floor(sec/3600)).padStart(2,'0');
+    const m = String(Math.floor((sec%3600)/60)).padStart(2,'0');
+    const s = String(sec%60).padStart(2,'0');
+    return `${h}:${m}:${s}`;
+  }
+
+  function compute(ms, rate, freeMin){
+    const freeMs = Math.max(0, freeMin) * 60000;
+    const billableMs = Math.max(0, ms - freeMs);
+    const minutes = Math.floor(billableMs / 60000); // minutos completos post-gratis
+    const total = minutes * rate;
+    return {minutes, total};
+  }
+
+  function tick(){
+    const now = Date.now();
+    const diff = elapsed + (startTime ? now - startTime : 0);
+    $('timerDisplay').textContent = fmt(diff);
+    const rate = parseFloat($('rateGs').value) || 0;
+    const free = parseInt($('freeMin').value) || 0;
+    const { total } = compute(diff, rate, free);
+    $('timerTotal').textContent = `Total: ${total} Gs`;
+  }
+
+  function start(){
+    if(!startTime){
+      startTime = Date.now();
+      interval = setInterval(tick, 500); // Date.now asegura precisión aunque la pestaña se inactiva
+    }
+  }
+  function stop(){
+    if(startTime){
+      elapsed += Date.now() - startTime;
+      startTime = null;
+      clearInterval(interval);
+      snapshot();
+    }
+  }
+  function reset(){
+    startTime = null;
+    elapsed = 0;
+    clearInterval(interval);
+    tick();
+  }
+  function snapshot(){
+    const rate = parseFloat($('rateGs').value) || 0;
+    const free = parseInt($('freeMin').value) || 0;
+    const { minutes, total } = compute(elapsed, rate, free);
+    const line = `${fmt(elapsed)} | Min. cobrados: ${minutes} | Total: ${total} Gs (Tarifa: ${rate} Gs/min, Gratis: ${free} min)`;
+    history.push(line);
+    $('timerHistory').innerHTML = history.map(h=>`<div>${h}</div>`).join('');
+  }
+  function download(){
+    const header = "Duración|Min. cobrados|Total|Tarifa|Gratis (min)\n";
+    const rows = history.map(line => line
+      .replaceAll(" | ","|")
+      .replace("Total: ","")
+      .replace(" Gs (Tarifa: ","|")
+      .replace(" Gs/min, Gratis: ","|")
+      .replace(" min)",""));
+    const blob = new Blob([header + rows.join("\n")], {type:"text/plain"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "historial_temporizador.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Bind events when DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    $('btnStart')?.addEventListener('click', start);
+    $('btnStop')?.addEventListener('click', stop);
+    $('btnReset')?.addEventListener('click', reset);
+    $('btnDownloadHistory')?.addEventListener('click', download);
+    document.addEventListener('input', (e)=>{
+      if(e.target.id === 'rateGs' || e.target.id === 'freeMin') tick();
+    });
+    tick();
+  });
+})();
+// ===== /Temporizador de Diseño =====
+</script>
+
+</body>
+</html>
+
