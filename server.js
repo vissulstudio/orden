@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const querystring = require('querystring');
 
-const port = 8000;
+const port = Number(process.env.PORT) || 8000;
 
 // Simple credential store
 const USERNAME = 'admin';
@@ -15,7 +15,7 @@ function parseCookies(req) {
   if (rc) {
     rc.split(';').forEach(cookie => {
       const parts = cookie.split('=');
-      list[parts.shift().trim()] = decodeURI(parts.join('='));
+      list[parts.shift().trim()] = decodeURIComponent(parts.join('='));
     });
   }
   return list;
@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
       const { username, password } = querystring.parse(body);
       if (username === USERNAME && password === PASSWORD) {
         res.writeHead(302, {
-          'Set-Cookie': 'auth=true; HttpOnly',
+          'Set-Cookie': 'auth=true; Path=/; HttpOnly; SameSite=Lax',
           Location: '/index.html'
         });
         res.end();
@@ -43,7 +43,7 @@ const server = http.createServer((req, res) => {
 
   if (req.url === '/logout') {
     res.writeHead(302, {
-      'Set-Cookie': 'auth=; Max-Age=0',
+      'Set-Cookie': 'auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
       Location: '/login.html'
     });
     res.end();
@@ -51,7 +51,7 @@ const server = http.createServer((req, res) => {
   }
 
   const cookies = parseCookies(req);
-  if (!cookies.auth && req.url !== '/login.html') {
+  if (cookies.auth !== 'true' && req.url !== '/login.html') {
     res.writeHead(302, { Location: '/login.html' });
     res.end();
     return;
@@ -99,6 +99,10 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}/`);
-});
+if (require.main === module) {
+  server.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}/`);
+  });
+}
+
+module.exports = server;
